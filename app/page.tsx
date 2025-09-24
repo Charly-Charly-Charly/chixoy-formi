@@ -1,103 +1,312 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+
+interface Institucion {
+  id: number;
+  nombre: string;
+}
+
+interface Proyecto {
+  id: number;
+  nombre: string;
+  medida: string;
+  eje: string;
+  meta: number;
+}
+
+interface FormData {
+  poa: boolean;
+  pei: boolean;
+  pom: boolean;
+  cumplimiento: boolean;
+  porcentaje_acciones_realizadas: number;
+  finiquito: File | null;
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [instituciones, setInstituciones] = useState<Institucion[]>([]);
+  const [selectedInstitucionId, setSelectedInstitucionId] = useState<string>('');
+  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
+  const [formData, setFormData] = useState<{ [key: number]: FormData }>({});
+  const [loading, setLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>('');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  // 1. Cargar las instituciones al inicio
+  useEffect(() => {
+    const fetchInstituciones = async () => {
+      try {
+        const res = await fetch('/api/instituciones');
+        if (!res.ok) throw new Error('Failed to fetch institutions');
+        const data = await res.json();
+        setInstituciones(data);
+      } catch (error) {
+        console.error('Error fetching institutions:', error);
+      }
+    };
+    fetchInstituciones();
+  }, []);
+
+  // 2. Cargar proyectos al cambiar de institución
+  const handleInstitucionChange = async (e: ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    setSelectedInstitucionId(id);
+    setProyectos([]); // Limpiar proyectos al cambiar
+    setFormData({}); // Limpiar estado del formulario
+    if (id) {
+      try {
+        const res = await fetch(`/api/proyectos?institucionId=${id}`);
+        if (!res.ok) throw new Error('Failed to fetch projects');
+        const data = await res.json();
+        setProyectos(data);
+        // Inicializar el estado del formulario para cada proyecto
+        const initialFormData = data.reduce((acc: any, proyecto: Proyecto) => {
+          acc[proyecto.id] = {
+            poa: false,
+            pei: false,
+            pom: false,
+            cumplimiento: false,
+            porcentaje_acciones_realizadas: 0,
+            finiquito: null,
+          };
+          return acc;
+        }, {});
+        setFormData(initialFormData);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      }
+    }
+  };
+
+  // 3. Manejar cambios en los campos del formulario
+  const handleFormChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    proyectoId: number,
+  ) => {
+    const { name, value, type, checked } = e.target as HTMLInputElement;
+
+    setFormData((prevData) => ({
+      ...prevData,
+      [proyectoId]: {
+        ...prevData[proyectoId],
+        [name]: type === 'checkbox' ? checked : value,
+      },
+    }));
+  };
+
+  // 4. Manejar la selección de archivos
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, proyectoId: number) => {
+    const file = e.target.files?.[0] || null;
+    setFormData((prevData) => ({
+      ...prevData,
+      [proyectoId]: {
+        ...prevData[proyectoId],
+        finiquito: file,
+      },
+    }));
+  };
+
+  // 5. Enviar el formulario completo
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+
+    try {
+      for (const proyectoIdStr in formData) {
+        const proyectoId = parseInt(proyectoIdStr);
+        const proyectoData = formData[proyectoId];
+        const proyecto = proyectos.find((p) => p.id === proyectoId);
+        
+        if (!proyecto) continue;
+
+        let finiquitoPath = null;
+        if (proyectoData.finiquito) {
+          // Subir el PDF primero
+          const uploadData = new FormData();
+          uploadData.append('finiquito', proyectoData.finiquito);
+          
+          const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: uploadData,
+          });
+
+          if (!uploadRes.ok) throw new Error('Failed to upload PDF');
+          const uploadResult = await uploadRes.json();
+          finiquitoPath = uploadResult.filePath;
+        }
+
+        // Enviar los datos del reporte a la base de datos
+        const reportRes = await fetch('/api/reportes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            proyectoId,
+            cumplimiento: proyectoData.cumplimiento,
+            poa: proyectoData.poa,
+            pei: proyectoData.pei,
+            pom: proyectoData.pom,
+            porcentaje_acciones_realizadas: parseFloat(String(proyectoData.porcentaje_acciones_realizadas)),
+            finiquito_path: finiquitoPath,
+          }),
+        });
+
+        if (!reportRes.ok) throw new Error(`Failed to save report for project ${proyecto.nombre}`);
+      }
+
+      setMessage('Reportes generados con éxito!');
+      // Redireccionar o limpiar el formulario
+    } catch (error: any) {
+      console.error(error);
+      setMessage(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      {/* ... (el resto del JSX que ya tenías) ... */}
+      <main className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
+        <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Reporte de Cumplimiento</h1>
+
+        {/* Selector de Institución */}
+        <div className="mb-8">
+          <label htmlFor="institucion" className="block text-gray-700 font-bold mb-2">
+            Selecciona tu Institución:
+          </label>
+          <select
+            id="institucion"
+            value={selectedInstitucionId}
+            onChange={handleInstitucionChange}
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <option value="">-- Selecciona una institución --</option>
+            {instituciones.map((inst) => (
+              <option key={inst.id} value={inst.id}>
+                {inst.nombre}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {/* Formulario de Proyectos */}
+        {proyectos.length > 0 && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <h2 className="text-2xl font-semibold mb-4 text-gray-700">Proyectos Asignados</h2>
+            {proyectos.map((proyecto) => (
+              <div
+                key={proyecto.id}
+                className="p-6 border border-gray-200 rounded-lg bg-gray-50 hover:shadow-lg transition-shadow"
+              >
+                <h3 className="text-xl font-bold text-gray-800 mb-2">{proyecto.nombre}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <span className="font-semibold text-gray-600">Medida:</span> {proyecto.medida}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-600">Eje:</span> {proyecto.eje}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-600">Meta:</span> {proyecto.meta}
+                  </div>
+                </div>
+
+                {/* Checks y entradas del formulario */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="checkbox"
+                      id={`poa-${proyecto.id}`}
+                      name="poa"
+                      checked={formData[proyecto.id]?.poa || false}
+                      onChange={(e) => handleFormChange(e, proyecto.id)}
+                      className="form-checkbox h-5 w-5 text-blue-600"
+                    />
+                    <label htmlFor={`poa-${proyecto.id}`} className="text-gray-700">
+                      POA
+                    </label>
+                    <input
+                      type="checkbox"
+                      id={`pei-${proyecto.id}`}
+                      name="pei"
+                      checked={formData[proyecto.id]?.pei || false}
+                      onChange={(e) => handleFormChange(e, proyecto.id)}
+                      className="form-checkbox h-5 w-5 text-blue-600"
+                    />
+                    <label htmlFor={`pei-${proyecto.id}`} className="text-gray-700">
+                      PEI
+                    </label>
+                    <input
+                      type="checkbox"
+                      id={`pom-${proyecto.id}`}
+                      name="pom"
+                      checked={formData[proyecto.id]?.pom || false}
+                      onChange={(e) => handleFormChange(e, proyecto.id)}
+                      className="form-checkbox h-5 w-5 text-blue-600"
+                    />
+                    <label htmlFor={`pom-${proyecto.id}`} className="text-gray-700">
+                      POM
+                    </label>
+                  </div>
+                  <div>
+                    <label htmlFor={`cumplimiento-${proyecto.id}`} className="block text-gray-700">
+                      Cumplimiento de Acciones:
+                    </label>
+                    <select
+                      id={`cumplimiento-${proyecto.id}`}
+                      name="cumplimiento"
+                      value={formData[proyecto.id]?.cumplimiento ? 'true' : 'false'}
+                      onChange={(e) => handleFormChange(e, proyecto.id)}
+                      className="mt-1 w-full p-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="false">No</option>
+                      <option value="true">Sí</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor={`porcentaje-${proyecto.id}`} className="block text-gray-700">
+                      Porcentaje de Acciones Realizadas:
+                    </label>
+                    <input
+                      type="number"
+                      id={`porcentaje-${proyecto.id}`}
+                      name="porcentaje_acciones_realizadas"
+                      value={formData[proyecto.id]?.porcentaje_acciones_realizadas || 0}
+                      onChange={(e) => handleFormChange(e, proyecto.id)}
+                      className="mt-1 w-full p-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`finiquito-${proyecto.id}`} className="block text-gray-700">
+                      Finiquito (PDF):
+                    </label>
+                    <input
+                      type="file"
+                      id={`finiquito-${proyecto.id}`}
+                      name="finiquito"
+                      accept="application/pdf"
+                      onChange={(e) => handleFileChange(e, proyecto.id)}
+                      className="mt-1 w-full text-gray-700"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-md hover:bg-blue-700 transition duration-300 disabled:opacity-50"
+            >
+              {loading ? 'Generando...' : 'Generar Reporte'}
+            </button>
+            {message && (
+              <p className="mt-4 text-center text-green-600 font-semibold">{message}</p>
+            )}
+          </form>
+        )}
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      {/* ... (el resto del JSX) ... */}
     </div>
   );
 }
