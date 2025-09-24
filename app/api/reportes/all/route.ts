@@ -1,7 +1,5 @@
-// app/api/reportes/all/route.ts
-
-import { NextResponse } from 'next/server';
-import { connectDB } from '../../../../lib/db';
+import { NextResponse } from "next/server";
+import { connectDB } from "../../../../lib/db";
 
 export async function GET() {
   let connection;
@@ -10,6 +8,7 @@ export async function GET() {
     const [rows] = await connection.execute(
       `SELECT
         p.nombre AS proyecto,
+        p.cod,
         i.nombre AS institucion,
         p.medida,
         p.eje,
@@ -19,7 +18,9 @@ export async function GET() {
         r.pom,
         p.meta,
         r.porcentaje_acciones_realizadas,
-        r.finiquito_path
+        r.finiquito_path,
+        r.aclaraciones,  -- Agregado aquí
+        r.justificacion  -- Agregado aquí
       FROM Reportes r
       JOIN Proyectos p ON r.proyectoId = p.id
       JOIN Instituciones i ON p.institucionId = i.id
@@ -27,8 +28,11 @@ export async function GET() {
     );
     return NextResponse.json(rows, { status: 200 });
   } catch (error) {
-    console.error('Error fetching reports:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    console.error("Error fetching reports:", error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   } finally {
     if (connection) connection.end();
   }

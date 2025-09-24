@@ -14,10 +14,23 @@ export async function GET(req: NextRequest) {
   let connection;
   try {
     connection = await connectDB();
-    const [rows] = await connection.execute(
-      'SELECT * FROM Proyectos WHERE institucionId = ?',
+    
+    // Consulta para obtener proyectos y el ID del reporte asociado si existe
+    const [rows]: any = await connection.execute(
+      `SELECT 
+        p.id,
+        p.nombre,
+        p.cod,
+        p.medida,
+        p.eje,
+        p.meta,
+        r.id AS reporte_id
+      FROM Proyectos p
+      LEFT JOIN Reportes r ON p.id = r.proyectoId
+      WHERE p.institucionId = ?`,
       [institucionId]
     );
+
     return NextResponse.json(rows, { status: 200 });
   } catch (error) {
     console.error('Error fetching proyectos:', error);
