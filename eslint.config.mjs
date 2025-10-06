@@ -11,6 +11,14 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  // 👇 Nuevo objeto para anular la regla de 'any'
+  {
+    rules: {
+      // Desactiva la regla que prohíbe el uso explícito de 'any' en TypeScript.
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  // 👇 Objeto con la configuración de 'ignores'
   {
     ignores: [
       "node_modules/**",

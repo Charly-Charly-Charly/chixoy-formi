@@ -37,7 +37,9 @@ const Modal: FC<{
           </h3>
         </div>
         <div className="mt-4 px-7 py-3 flex-1 overflow-y-auto">
-          <p className="text-sm text-gray-500 text-left">{content}</p>
+          <p className="text-sm text-gray-500 text-left whitespace-pre-wrap">
+            {content}
+          </p>
         </div>
         <div className="items-center px-4 py-3">
           <button
@@ -52,7 +54,7 @@ const Modal: FC<{
   );
 };
 
-// Componente principal de la tabla
+// --- INTERFACE ACTUALIZADA CON LOS NUEVOS CAMPOS DE ENLACE ---
 interface Reporte {
   proyecto: string;
   cod: string;
@@ -65,7 +67,13 @@ interface Reporte {
   pom: boolean;
   meta: number;
   porcentaje_acciones_realizadas: string;
-  finiquito_path: string | null;
+
+  // Nuevos campos
+  poaLink: string | null;
+  peiLink: string | null;
+  pomLink: string | null;
+  anio: number;
+  finiquitoLink: string | null;
   aclaraciones: string | null;
   justificacion: string | null;
 }
@@ -94,6 +102,7 @@ export default function Tabla() {
   useEffect(() => {
     const fetchReports = async () => {
       try {
+        // Asumiendo que este endpoint devuelve los nuevos campos: poa_path, pei_path, pom_path
         const res = await fetch("/api/reportes/all");
         if (!res.ok) {
           throw new Error("Failed to fetch reports");
@@ -174,9 +183,26 @@ export default function Tabla() {
     );
   }
 
+  const LinkButton = ({ path }: { path: string | null }) => (
+    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+      {path ? (
+        <a
+          href={path}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline font-medium"
+        >
+          Ver Enlace
+        </a>
+      ) : (
+        "N/A"
+      )}
+    </td>
+  );
+
   return (
     <div className="min-h-screen bg-sky-800 p-8">
-      <div className="max-w-full mx-auto bg-white p-8 rounded-lg shadow-md flex flex-col h-[60vh]">
+      <div className="max-w-full mx-auto bg-white p-8 rounded-lg shadow-md flex flex-col h-[90vh]">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">
             Tabla de Reportes Generados
@@ -195,9 +221,10 @@ export default function Tabla() {
           </p>
         ) : (
           <div className="overflow-y-auto flex-1">
-            <table className="min-w-full divide-y divide-gray-200 table-fixed">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
+                  {/* Columnas principales */}
                   <th
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                     onClick={() => handleSort("cod")}
@@ -207,7 +234,7 @@ export default function Tabla() {
                       (sortConfig.direction === "asc" ? " ▲" : " ▼")}
                   </th>
                   <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-[40%]"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-[25%]"
                     onClick={() => handleSort("proyecto")}
                   >
                     Proyecto
@@ -223,11 +250,15 @@ export default function Tabla() {
                       (sortConfig.direction === "asc" ? " ▲" : " ▼")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Año
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Medida
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Eje
                   </th>
+                  {/* Indicadores Booleanos */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     POA
                   </th>
@@ -237,6 +268,17 @@ export default function Tabla() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     POM
                   </th>
+                  {/* --- NUEVAS COLUMNAS DE ENLACE --- */}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Enlace POA
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Enlace PEI
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Enlace POM
+                  </th>
+                  {/* Datos de cumplimiento */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cumplimiento
                   </th>
@@ -251,6 +293,7 @@ export default function Tabla() {
                     {sortConfig?.key === "porcentaje_acciones_realizadas" &&
                       (sortConfig.direction === "asc" ? " ▲" : " ▼")}
                   </th>
+                  {/* Documentación y textos */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Finiquito
                   </th>
@@ -268,11 +311,14 @@ export default function Tabla() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {reporte.cod}
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 w-[40vw] break-words">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 break-words">
                       {reporte.proyecto}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {reporte.institucion}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {reporte.anio}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {reporte.medida}
@@ -280,6 +326,7 @@ export default function Tabla() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {reporte.eje}
                     </td>
+                    {/* Indicadores Booleanos */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                       {reporte.poa ? "✔️" : "❌"}
                     </td>
@@ -289,22 +336,28 @@ export default function Tabla() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                       {reporte.pom ? "✔️" : "❌"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    {/* --- Display de Enlaces --- */}
+                    <LinkButton path={reporte.poaLink} />
+                    <LinkButton path={reporte.peiLink} />
+                    <LinkButton path={reporte.pomLink} />
+                    {/* Datos de cumplimiento */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-bold">
                       {reporte.cumplimiento}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {reporte.meta}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
                       {parseFloat(
                         reporte.porcentaje_acciones_realizadas
                       ).toFixed(2)}
                       %
                     </td>
+                    {/* Finiquito y textos */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {reporte.finiquito_path ? (
+                      {reporte.finiquitoLink ? (
                         <a
-                          href={reporte.finiquito_path}
+                          href={reporte.finiquitoLink}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:underline"
@@ -326,7 +379,7 @@ export default function Tabla() {
                           Ver más
                         </button>
                       ) : (
-                        <span>{reporte.aclaraciones}</span>
+                        <span>{reporte.aclaraciones || "N/A"}</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs overflow-hidden">
@@ -343,7 +396,7 @@ export default function Tabla() {
                           Ver más
                         </button>
                       ) : (
-                        <span>{reporte.justificacion}</span>
+                        <span>{reporte.justificacion || "N/A"}</span>
                       )}
                     </td>
                   </tr>

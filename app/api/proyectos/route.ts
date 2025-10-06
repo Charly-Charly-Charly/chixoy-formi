@@ -23,10 +23,8 @@ export async function GET(req: NextRequest) {
         p.cod,
         p.medida,
         p.eje,
-        p.meta,
-        r.id AS reporte_id
+        p.meta
       FROM Proyectos p
-      LEFT JOIN Reportes r ON p.id = r.proyectoId
       WHERE p.institucionId = ?`,
       [institucionId]
     );

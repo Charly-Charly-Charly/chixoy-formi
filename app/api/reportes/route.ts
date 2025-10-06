@@ -1,94 +1,80 @@
 // app/api/reportes/route.ts
+import { NextResponse } from "next/server";
+import mysql from "mysql2/promise";
 
-import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "../../../lib/db";
+const dbConfig = {
+  host: "193.203.166.162",
+  user: "u798549879_admin_dc",
+  password: "admin_DC2023",
+  database: "u798549879_dash_chixoy",
+};
 
-export async function POST(req: NextRequest) {
-  let connection;
+export async function POST(req: Request) {
   try {
     const {
       proyectoId,
       cumplimiento,
+      porcentaje_acciones_realizadas,
+      aclaraciones,
+      // ✅ CORREGIDO: Extraer poa, pei y pom
       poa,
       pei,
       pom,
-      finiquito_path,
-      aclaraciones,
       justificacion,
+      poaLink,
+      peiLink,
+      pomLink,
+      finiquitoLink,
+      anio,
     } = await req.json();
 
-    if (
-      !proyectoId ||
-      cumplimiento === undefined ||
-      aclaraciones === undefined
-    ) {
-      return NextResponse.json(
-        {
-          message:
-            "Missing required fields: proyectoId, cumplimiento, or aclaraciones",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validación condicional para la justificación
-    if (cumplimiento === 0 && !justificacion) {
-      return NextResponse.json(
-        { message: "Justification is required when compliance is 0" },
-        { status: 400 }
-      );
-    }
-
-    connection = await connectDB();
-
-    // Obtener la meta del proyecto para calcular el porcentaje
-    const [proyectoRows]: any = await connection.execute(
-      `SELECT meta FROM Proyectos WHERE id = ?`,
-      [proyectoId]
-    );
-    const meta = proyectoRows[0]?.meta;
-
-    if (meta === null || meta === undefined) {
-      return NextResponse.json(
-        { message: "Meta for the project not found" },
-        { status: 404 }
-      );
-    }
-
-    // Calcular el porcentaje: (cumplimiento / meta) * 100
-    const porcentaje_acciones_realizadas = (cumplimiento / meta) * 100;
-
+    // 1. ✅ CORREGIDO: Crear los valores numéricos (0 o 1) para la BD
     const poaValue = poa ? 1 : 0;
     const peiValue = pei ? 1 : 0;
     const pomValue = pom ? 1 : 0;
 
-    await connection.execute(
-      `INSERT INTO Reportes (proyectoId, cumplimiento, poa, pei, pom, porcentaje_acciones_realizadas, finiquito_path, aclaraciones, justificacion)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        proyectoId,
-        cumplimiento,
-        poaValue,
-        peiValue,
-        pomValue,
-        porcentaje_acciones_realizadas,
-        finiquito_path,
-        aclaraciones,
-        justificacion,
-      ]
-    );
+    // Conectar a la base de datos
+    const connection = await mysql.createConnection(dbConfig);
+
+    // 2. Consulta INSERT (Se mantiene, está correcta y tiene 12 columnas)
+    const query = `
+      INSERT INTO Reportes 
+      (proyectoId, cumplimiento, porcentaje_acciones_realizadas, aclaraciones, justificacion, poa, pei, pom, poaLink, peiLink, pomLink, finiquitoLink, anio)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+    `;
+
+    // 3. ✅ CORREGIDO: Los valores deben COINCIDIR en número (12) y orden con la consulta.
+    const values = [
+      proyectoId,
+      cumplimiento,
+      porcentaje_acciones_realizadas,
+      aclaraciones,
+      justificacion,
+      poaValue, // 👈 USAR poaValue
+      peiValue, // 👈 USAR peiValue
+      pomValue, // 👈 USAR pomValue
+      poaLink,
+      peiLink,
+      pomLink,
+      finiquitoLink,
+      anio,
+    ];
+
+    await connection.execute(query, values);
+    connection.end();
 
     return NextResponse.json(
-      { message: "Report created successfully" },
+      { message: "Reporte creado exitosamente" },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error creating report:", error);
+    console.error("Error al crear el reporte:", error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      {
+        message: "Error interno del servidor.",
+        error: (error as Error).message,
+      },
       { status: 500 }
     );
-  } finally {
-    if (connection) connection.end();
   }
 }
