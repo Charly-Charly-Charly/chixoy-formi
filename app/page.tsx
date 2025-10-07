@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import Image from "next/image";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 
@@ -15,12 +16,12 @@ import html2canvas from "html2canvas";
 /**
  * Componente para la línea de firma (solo visual en el formulario).
  */
-const SignatureLine = () => (
-  <div className="flex flex-col items-center mt-8">
-    <div className="border-t border-gray-400 w-64 my-2"></div>
-    <span className="text-sm text-gray-600">Firma</span>
-  </div>
-);
+// const SignatureLine = () => (
+//   <div className="flex flex-col items-center mt-8">
+//     <div className="border-t border-gray-400 w-64 my-2"></div>
+//     <span className="text-sm text-gray-600">Firma</span>
+//   </div>
+// );
 
 const MySwal = withReactContent(Swal);
 
@@ -182,26 +183,26 @@ const generatePDF = (data: any) => {
 
   // 2. Usar html2canvas para capturar el HTML
   html2canvas(content, { scale: 2 }).then((canvas) => {
-    const imgData = canvas.toDataURL("image/png");
+    const ImageData = canvas.toDataURL("image/png");
     const doc = new jsPDF("p", "mm", "a4");
 
     // Dimensiones A4 en mm
     const docHeight = doc.internal.pageSize.getHeight();
-    const imgWidth = 210;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
+    const ImageWidth = 210;
+    const ImageHeight = (canvas.height * ImageWidth) / canvas.width;
+    let heightLeft = ImageHeight;
     let position = 0;
 
     // Primer página
-    doc.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    doc.addImage(ImageData, "PNG", 0, position, ImageWidth, ImageHeight);
     heightLeft -= docHeight;
 
     // Si hay más contenido (manejo de multi-página)
     while (heightLeft > -5) {
       // Usamos -5 como margen de error
-      position = heightLeft - imgHeight;
+      position = heightLeft - ImageHeight;
       doc.addPage();
-      doc.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      doc.addImage(ImageData, "PNG", 0, position, ImageWidth, ImageHeight);
       heightLeft -= docHeight;
     }
 
@@ -507,10 +508,10 @@ export default function Home() {
     return (
       <div className="flex items-center justify-center h-screen bg-[#202b52]">
         <div className="flex flex-col items-center">
-          <img
+          <Image
             src="/logo-copadeh.png" // cambia esta ruta a tu imagen
             alt="Cargando..."
-            className="w-64 animate-pulse"
+            width={300}
           />
           <p className="mt-4 text-white font-semibold text-lg">Cargando...</p>
         </div>

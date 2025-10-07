@@ -174,11 +174,11 @@ const generatePDF = (data) => {
 
   // 2. Usar html2canvas para capturar el HTML
   // NOTA: 'html2canvas' debe estar disponible globalmente
-  // @ts-ignore
+
   html2canvas(content, { scale: 2 }).then((canvas) => {
     const imgData = canvas.toDataURL("image/png");
     // NOTA: 'jsPDF' debe estar disponible globalmente
-    // @ts-ignore
+
     const doc = new jsPDF("p", "mm", "a4");
 
     // Dimensiones A4 en mm
