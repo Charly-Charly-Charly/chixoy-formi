@@ -5,27 +5,76 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import Swal from "sweetalert2";
 
-// IMPORTANTE: Para un entorno de desarrollo real, necesitarías instalar:
-// npm install jspdf html2canvas
-// En este entorno de archivo único, se asume que las variables jsPDF y html2canvas son globales.
+// *****************************************************************
+// 1. DEFINICIÓN DE TIPOS DE DATOS (Necesario para que el código funcione)
+// *****************************************************************
 
-// Definición del rango de años (2015 a 2025)
+// Tipo base para un registro individual (tal como viene de la API)
+interface ApiRecord {
+  institucion: string;
+  cod: string;
+  anio: number;
+  proyecto: string;
+  eje: string;
+  medida: string;
+  meta: number; // Asumimos que es un número
+  cumplimiento: number; // Asumimos que es un número
+  porcentaje_acciones_realizadas: number; // Asumimos que es un número
+  aclaraciones: string;
+  justificacion: string;
+  finiquitoLink?: string;
+  pei?: boolean;
+  poa?: boolean;
+  pom?: boolean;
+  peiLink?: string;
+  poaLink?: string;
+  pomLink?: string;
+  [key: string]: any;
+}
+
+// Estructura de un proyecto dentro de una institución normalizada
+interface ProjectEntry {
+  cod: string;
+  proyecto: string;
+  dataByYear: Record<string, ApiRecord | undefined>; // Puede ser un registro o undefined
+}
+
+// Estructura de una institución normalizada (antes de la conversión final)
+interface NormalizedInstitution {
+  name: string;
+  projects: Record<string, ProjectEntry>;
+  rowspan: number;
+}
+
+// El tipo final que devuelve useReportData (el valor 'projects' es un array)
+interface FinalNormalizedInstitution
+  extends Omit<NormalizedInstitution, "projects"> {
+  projects: ProjectEntry[];
+}
+
+// *****************************************************************
+// 2. HOOK PERSONALIZADO: useReportData
+// *****************************************************************
+
 const YEARS = Array.from({ length: 2025 - 2015 + 1 }, (_, i) => 2015 + i);
 
-/**
- * Hook personalizado para normalizar los datos, aplicando filtro por institución.
- */
-const useReportData = (rawData, selectedInstitution) => {
+const useReportData = (
+  rawData: ApiRecord[],
+  selectedInstitution: string | null
+): FinalNormalizedInstitution[] => {
   return useMemo(() => {
+    // 1. Filtrado de datos
     const filteredData = selectedInstitution
       ? rawData.filter((record) => record.institucion === selectedInstitution)
       : [];
 
-    const institutionsMap = {};
+    // 2. Inicialización del mapa de instituciones (Solo se inicializa aquí)
+    const institutionsMap: Record<string, NormalizedInstitution> = {};
 
     filteredData.forEach((record) => {
       const { institucion, cod, anio } = record;
 
+      // a. Inicializa la Institución si es la primera vez que la vemos
       if (!institutionsMap[institucion]) {
         institutionsMap[institucion] = {
           name: institucion,
@@ -36,6 +85,7 @@ const useReportData = (rawData, selectedInstitution) => {
 
       const institutionEntry = institutionsMap[institucion];
 
+      // b. Inicializa el Proyecto si es la primera vez que lo vemos
       if (!institutionEntry.projects[cod]) {
         institutionEntry.projects[cod] = {
           cod: cod,
@@ -45,37 +95,39 @@ const useReportData = (rawData, selectedInstitution) => {
         institutionEntry.rowspan++;
       }
 
-      institutionEntry.projects[cod].dataByYear[anio] = record;
+      // c. Asigna el registro al año correspondiente
+      institutionEntry.projects[cod].dataByYear[String(anio)] = record;
     });
 
+    // 3. Normalización final (convierte el objeto institutionsMap a un array FinalNormalizedInstitution[])
     const normalizedData = Object.values(institutionsMap).map((inst) => ({
       ...inst,
       projects: Object.values(inst.projects),
-    }));
+    })) as FinalNormalizedInstitution[];
 
     return normalizedData;
   }, [rawData, selectedInstitution]);
 };
 
-// --- FUNCIÓN DE GENERACIÓN DE PDF ESTILIZADA CON FIRMA Y SELLO ---
-const generatePDF = (data) => {
-  // Definimos el porcentaje usando el campo existente en la data
+// *****************************************************************
+// 3. FUNCIÓN DE GENERACIÓN DE PDF ESTILIZADA
+// *****************************************************************
+
+const generatePDF = (data: ApiRecord) => {
   const porcentaje = data.porcentaje_acciones_realizadas || 0;
 
-  // Crear un contenedor temporal para el contenido del PDF
   const content = document.createElement("div");
   content.id = "pdf-content-container";
-  content.style.width = "210mm"; // Ancho A4
+  content.style.width = "210mm";
   content.style.padding = "15mm";
   content.style.backgroundColor = "#ffffff";
   content.style.fontFamily = "Arial, sans-serif";
   content.style.boxSizing = "border-box";
   content.style.lineHeight = "1.4";
-  content.style.fontSize = "12pt"; // Aseguramos tamaño de fuente base
+  content.style.fontSize = "12pt";
 
-  // Estilos de utilidad
-  const headerColor = "#004c99"; // Azul corporativo
-  const accentColor = "#e0e7ff"; // Azul claro para fondo
+  const headerColor = "#004c99";
+  const accentColor = "#e0e7ff";
 
   const formatDate = () => {
     const now = new Date();
@@ -86,7 +138,7 @@ const generatePDF = (data) => {
     });
   };
 
-  // Contenido HTML estilizado
+  // Contenido HTML estilizado (usa 'data' correctamente tipado)
   content.innerHTML = `
         <div style="border: 2px solid ${headerColor}; padding: 15px; border-radius: 8px;">
             <div style="text-align: center; background-color: ${headerColor}; color: white; padding: 15px; border-radius: 5px 5px 0 0; margin: -15px -15px 15px -15px;">
@@ -107,7 +159,7 @@ const generatePDF = (data) => {
                 <tr><td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Eje y Medida:</td><td style="padding: 8px; border: 1px solid #ddd;">${
     data.eje
   } - ${data.medida}</td></tr>
-     <tr><td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Año:</td><td style="padding: 8px; border: 1px solid #ddd;">${
+      <tr><td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Año:</td><td style="padding: 8px; border: 1px solid #ddd;">${
     data.anio
   }</td></tr>
             </table>
@@ -169,30 +221,22 @@ const generatePDF = (data) => {
         </div>
     `;
 
-  // 1. Añadir el contenido al cuerpo del documento (invisible para el usuario)
   document.body.appendChild(content);
-
-  // 2. Usar html2canvas para capturar el HTML
-  // NOTA: 'html2canvas' debe estar disponible globalmente
 
   html2canvas(content, { scale: 2 }).then((canvas) => {
     const imgData = canvas.toDataURL("image/png");
-    // NOTA: 'jsPDF' debe estar disponible globalmente
 
     const doc = new jsPDF("p", "mm", "a4");
 
-    // Dimensiones A4 en mm
     const docHeight = doc.internal.pageSize.getHeight();
     const imgWidth = 210;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     let heightLeft = imgHeight;
     let position = 0;
 
-    // Primer página
     doc.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
     heightLeft -= docHeight;
 
-    // Si hay más contenido (manejo de multi-página)
     while (heightLeft > -5) {
       position = heightLeft - imgHeight;
       doc.addPage();
@@ -200,21 +244,25 @@ const generatePDF = (data) => {
       heightLeft -= docHeight;
     }
 
-    // 3. Descargar el PDF
     doc.save(`Reporte_Cumplimiento_${data.cod}_${data.anio}.pdf`);
 
-    // 4. Limpiar el DOM
     document.body.removeChild(content);
   });
 };
 
-// --- COMPONENTE MODAL DE DETALLES ---
-const DetailsModal = ({ record, onClose }) => {
+// *****************************************************************
+// 4. COMPONENTES REACT
+// *****************************************************************
+
+interface DetailsModalProps {
+  record: ApiRecord | null;
+  onClose: () => void;
+}
+
+const DetailsModal = ({ record, onClose }: DetailsModalProps) => {
   if (!record) return null;
 
-  // La función que se llama desde el botón
   const handleDownloadPDF = () => {
-    // Llama a la función de generación con el registro completo
     generatePDF(record);
     const Toast = Swal.mixin({
       toast: true,
@@ -234,7 +282,7 @@ const DetailsModal = ({ record, onClose }) => {
     });
   };
 
-  const renderLink = (url, text) => {
+  const renderLink = (url: string | undefined, text: string) => {
     if (!url) return <span className="text-gray-500">N/A</span>;
     return (
       <a
@@ -371,38 +419,36 @@ const DetailsModal = ({ record, onClose }) => {
   );
 };
 
-// --- COMPONENTE PRINCIPAL ---
+// *****************************************************************
+// 5. COMPONENTE PRINCIPAL
+// *****************************************************************
+
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [reportes, setReportes] = useState([]); // Almacena la data cruda de la API
-  const [selectedInstitution, setSelectedInstitution] = useState("");
-  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [reportes, setReportes] = useState<ApiRecord[]>([]);
+  const [selectedInstitution, setSelectedInstitution] = useState<string>("");
+  const [selectedRecord, setSelectedRecord] = useState<ApiRecord | null>(null);
 
-  // Hook para obtener la lista de instituciones únicas
-  const uniqueInstitutions = useMemo(() => {
+  const uniqueInstitutions = useMemo<string[]>(() => {
     if (!Array.isArray(reportes)) return [];
     const names = [...new Set(reportes.map((r) => r.institucion))].sort();
     return names;
   }, [reportes]);
 
-  // Hook para obtener la data normalizada y filtrada
   const normalizedData = useReportData(reportes, selectedInstitution);
 
-  // **********************************************
   // LÓGICA DE FETCH DE DATOS DESDE LA API
-  // **********************************************
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        // NOTA: Reemplazar "/api/reportes/all" con tu endpoint real de datos.
         const res = await fetch("/api/reportes/all");
 
         if (!res.ok) {
           throw new Error(`Failed to fetch reports. Status: ${res.status}`);
         }
 
-        const data = await res.json();
+        const data: ApiRecord[] = await res.json();
 
         setReportes(data);
 
@@ -422,10 +468,9 @@ export default function App() {
       }
     };
     fetchReports();
-  }, []); // Se ejecuta solo una vez al montar, sin dependencias.
-  // **********************************************
+  }, []);
 
-  const handleCellClick = (record) => {
+  const handleCellClick = (record: ApiRecord | undefined) => {
     if (record) {
       setSelectedRecord(record);
     }
@@ -453,8 +498,11 @@ export default function App() {
     );
   }
 
+  // Si no hay datos, 'normalizedData' es un array vacío. Debemos asegurarnos de manejarlo.
   const selectedInstitutionData = normalizedData[0];
-  const projects = selectedInstitutionData
+
+  // Aseguramos que 'projects' se lea correctamente del objeto o sea un array vacío
+  const projects: ProjectEntry[] = selectedInstitutionData
     ? selectedInstitutionData.projects
     : [];
 
@@ -550,7 +598,8 @@ export default function App() {
                       </td>
 
                       {YEARS.map((year) => {
-                        const record = project.dataByYear[year];
+                        // Accedemos a la dataByYear usando el año como string
+                        const record = project.dataByYear[String(year)];
                         const hasData = !!record;
                         const cellClasses = hasData
                           ? "bg-green-100 text-green-800 cursor-pointer hover:bg-green-200 transition duration-150 transform hover:scale-105"
