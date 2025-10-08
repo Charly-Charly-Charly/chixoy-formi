@@ -511,7 +511,8 @@ export default function Home() {
           <Image
             src="/logo-copadeh.png" // cambia esta ruta a tu imagen
             alt="Cargando..."
-            width={300}
+            height={300}
+            width={600}
           />
           <p className="mt-4 text-white font-semibold text-lg">Cargando...</p>
         </div>
