@@ -1,13 +1,63 @@
-// app/api/reportes/route.ts
 import { NextResponse } from "next/server";
 import mysql from "mysql2/promise";
 
 const dbConfig = {
   host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
 };
+
+// -------------------------------------------------------------
+// FUNCIÓN GET: Obtiene los años registrados para un proyecto específico
+// -------------------------------------------------------------
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const proyectoId = searchParams.get("proyectoId");
+
+    // 1. Validar la existencia del parámetro
+    if (!proyectoId) {
+      return NextResponse.json(
+        { message: "Falta el parámetro proyectoId" },
+        { status: 400 }
+      );
+    }
+
+    // 2. Conectar a la base de datos
+    const connection = await mysql.createConnection(dbConfig);
+
+    // 3. Consulta SELECT: Obtiene todos los valores distintos de 'anio'
+    //    de la tabla 'Reportes' donde 'proyectoId' coincide.
+    const query = `
+      SELECT DISTINCT anio
+      FROM Reportes
+      WHERE proyectoId = ?
+    `;
+
+    const [rows] = await connection.execute(query, [proyectoId]);
+    connection.end();
+
+    // 4. Mapear los resultados a un array simple de números (años)
+    const anios = (rows as { anio: number }[]).map((row) => row.anio);
+
+    return NextResponse.json(anios, { status: 200 });
+  } catch (error) {
+    console.error("Error al obtener los años registrados:", error);
+    return NextResponse.json(
+      {
+        message: "Error interno del servidor al obtener los años.",
+        error: (error as Error).message,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// -------------------------------------------------------------
+// FUNCIÓN POST: Crea un nuevo reporte
+// -------------------------------------------------------------
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +66,6 @@ export async function POST(req: Request) {
       cumplimiento,
       porcentaje_acciones_realizadas,
       aclaraciones,
-      // ✅ CORREGIDO: Extraer poa, pei y pom
       poa,
       pei,
       pom,
@@ -28,7 +77,7 @@ export async function POST(req: Request) {
       anio,
     } = await req.json();
 
-    // 1. ✅ CORREGIDO: Crear los valores numéricos (0 o 1) para la BD
+    // Crear los valores numéricos (0 o 1) para la BD
     const poaValue = poa ? 1 : 0;
     const peiValue = pei ? 1 : 0;
     const pomValue = pom ? 1 : 0;
@@ -36,23 +85,23 @@ export async function POST(req: Request) {
     // Conectar a la base de datos
     const connection = await mysql.createConnection(dbConfig);
 
-    // 2. Consulta INSERT (Se mantiene, está correcta y tiene 12 columnas)
+    // Consulta INSERT
     const query = `
       INSERT INTO Reportes 
       (proyectoId, cumplimiento, porcentaje_acciones_realizadas, aclaraciones, justificacion, poa, pei, pom, poaLink, peiLink, pomLink, finiquitoLink, anio)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    // 3. ✅ CORREGIDO: Los valores deben COINCIDIR en número (12) y orden con la consulta.
+    // Los valores deben COINCIDIR en número y orden con la consulta.
     const values = [
       proyectoId,
       cumplimiento,
       porcentaje_acciones_realizadas,
       aclaraciones,
       justificacion,
-      poaValue, // 👈 USAR poaValue
-      peiValue, // 👈 USAR peiValue
-      pomValue, // 👈 USAR pomValue
+      poaValue, 
+      peiValue, 
+      pomValue, 
       poaLink,
       peiLink,
       pomLink,

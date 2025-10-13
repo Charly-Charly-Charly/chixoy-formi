@@ -1,33 +1,15 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
 import Image from "next/image";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
-
-// Asegúrate de tener estas librerías instaladas:
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-// -------------------------------------------------------------
-// ## COMPONENTES DE VISTA Y UTILIDADES
-// -------------------------------------------------------------
-
-/**
- * Componente para la línea de firma (solo visual en el formulario).
- */
-// const SignatureLine = () => (
-//   <div className="flex flex-col items-center mt-8">
-//     <div className="border-t border-gray-400 w-64 my-2"></div>
-//     <span className="text-sm text-gray-600">Firma</span>
-//   </div>
-// );
-
-const MySwal = withReactContent(Swal);
-
-// -------------------------------------------------------------
-// ## TIPOS DE DATOS (INTERFACES)
-// -------------------------------------------------------------
+// ============================================================================
+// TYPES & INTERFACES
+// ============================================================================
 
 interface Institucion {
   id: number;
@@ -42,6 +24,10 @@ interface Proyecto {
   eje: string;
   meta: number;
   reporte_id: number | null;
+}
+
+interface Reporte {
+  anio: number;
 }
 
 interface FormData {
@@ -59,166 +45,165 @@ interface FormData {
   anio: number;
 }
 
-type ViewState = "selection" | "form";
+type ViewState = "institutions" | "projects" | "form";
 
-// -------------------------------------------------------------
-// ## FUNCIÓN DE GENERACIÓN DE PDF ESTILIZADA
-// -------------------------------------------------------------
+// ============================================================================
+// UTILITIES
+// ============================================================================
 
-/**
- * Genera y descarga un PDF estilizado a partir de los datos del reporte.
- * Utiliza html2canvas para renderizar HTML con estilos en un canvas,
- * y jspdf para convertir el canvas en un documento PDF.
- * @param data Datos completos del reporte y proyecto.
- */
+const MySwal = withReactContent(Swal);
+
+const formatDate = () => {
+  const now = new Date();
+  return now.toLocaleDateString("es-ES", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+// ============================================================================
+// PDF GENERATION
+// ============================================================================
+
 const generatePDF = (data: any) => {
-  // Crear un contenedor temporal para el contenido del PDF
   const content = document.createElement("div");
   content.id = "pdf-content-container";
-  content.style.width = "210mm"; // Ancho A4
+  content.style.width = "210mm";
   content.style.padding = "15mm";
   content.style.backgroundColor = "#ffffff";
   content.style.fontFamily = "Arial, sans-serif";
   content.style.boxSizing = "border-box";
   content.style.lineHeight = "1.4";
 
-  // Estilos de utilidad
-  const headerColor = "#004c99"; // Azul corporativo
-  const accentColor = "#e0e7ff"; // Azul claro para fondo
+  const headerColor = "#004c99";
+  const accentColor = "#e0e7ff";
 
-  const formatDate = () => {
-    const now = new Date();
-    return now.toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  // Contenido HTML estilizado
   content.innerHTML = `
     <div style="border: 2px solid ${headerColor}; padding: 15px; border-radius: 8px;">
-        <div style="text-align: center; background-color: ${headerColor}; color: white; padding: 15px; border-radius: 5px 5px 0 0; margin: -15px -15px 15px -15px;">
-            <h1 style="margin: 0; font-size: 24px;">REPORTE DE CUMPLIMIENTO DE PROYECTO</h1>
-            <p style="margin: 5px 0 0 0; font-size: 14px;">Generado el: ${formatDate()}</p>
-        </div>
+      <div style="text-align: center; background-color: ${headerColor}; color: white; padding: 15px; border-radius: 5px 5px 0 0; margin: -15px -15px 15px -15px;">
+        <h1 style="margin: 0; font-size: 24px;">REPORTE DE CUMPLIMIENTO DE PROYECTO</h1>
+        <p style="margin: 5px 0 0 0; font-size: 14px;">Generado el: ${formatDate()}</p>
+      </div>
 
-        <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
-            INFORMACIÓN GENERAL
-        </h2>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
-            <tr><td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Institución:</td><td style="padding: 8px; border: 1px solid #ddd;">${
-    data.institucion
-  }</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Proyecto:</td><td style="padding: 8px; border: 1px solid #ddd;">${
-    data.proyecto
-  } (${data.cod})</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Eje y Medida:</td><td style="padding: 8px; border: 1px solid #ddd;">${
-    data.eje
-  } - ${data.medida}</td></tr>
-      <tr><td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Año:</td><td style="padding: 8px; border: 1px solid #ddd;">${
-    data.anio
-  }</td></tr>
-        </table>
+      <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
+        INFORMACIÓN GENERAL
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+        <tr>
+          <td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Institución:</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${
+            data.institucion
+          }</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Proyecto:</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${data.proyecto} (${
+    data.cod
+  })</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Eje y Medida:</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${data.eje} - ${
+    data.medida
+  }</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Año:</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${data.anio}</td>
+        </tr>
+      </table>
 
-        <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
-            RESULTADOS
-        </h2>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
-            <thead>
-                <tr>
-                    <th style="padding: 8px; background-color: ${headerColor}; color: white; border: 1px solid #ddd;">Meta (Esperada)</th>
-                    <th style="padding: 8px; background-color: ${headerColor}; color: white; border: 1px solid #ddd;">Cumplimiento (Realizado)</th>
-                    <th style="padding: 8px; background-color: ${headerColor}; color: white; border: 1px solid #ddd;">Porcentaje %</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">${
-                      data.meta
-                    }</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">${
-                      data.cumplimiento
-                    }</td>
-                    <td style="padding: 8px; text-align: center; font-weight: bold; color: ${
-                      data.porcentaje < 100 ? "#cc0000" : "#008000"
-                    }; border: 1px solid #ddd;">${data.porcentaje}%</td>
-                </tr>
-            </tbody>
-        </table>
+      <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
+        RESULTADOS
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+        <thead>
+          <tr>
+            <th style="padding: 8px; background-color: ${headerColor}; color: white; border: 1px solid #ddd;">Meta (Esperada)</th>
+            <th style="padding: 8px; background-color: ${headerColor}; color: white; border: 1px solid #ddd;">Cumplimiento (Realizado)</th>
+            <th style="padding: 8px; background-color: ${headerColor}; color: white; border: 1px solid #ddd;">Porcentaje %</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">${
+              data.meta
+            }</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">${
+              data.cumplimiento
+            }</td>
+            <td style="padding: 8px; text-align: center; font-weight: bold; color: ${
+              data.porcentaje < 100 ? "#cc0000" : "#008000"
+            }; border: 1px solid #ddd;">${data.porcentaje}%</td>
+          </tr>
+        </tbody>
+      </table>
 
-        <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
-            DETALLES Y JUSTIFICACIÓN
-        </h2>
-        <p style="font-weight: bold; margin-bottom: 5px; color: #333; font-size: 14px;">Aclaraciones:</p>
-        <div style="border: 1px solid #ccc; padding: 10px; min-height: 50px; margin-bottom: 15px; background-color: #fafafa; white-space: pre-wrap; font-size: 13px;">
-            ${data.aclaraciones || "No se proporcionaron aclaraciones."}
-        </div>
-        <p style="font-weight: bold; margin-bottom: 5px; color: #333; font-size: 14px;">Justificación (Si Cumplimiento es 0):</p>
-        <div style="border: 1px solid #ccc; padding: 10px; min-height: 50px; margin-bottom: 30px; background-color: #fafafa; white-space: pre-wrap; font-size: 13px;">
-            ${data.justificacion || "No aplica."}
-        </div>
+      <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
+        DETALLES Y JUSTIFICACIÓN
+      </h2>
+      <p style="font-weight: bold; margin-bottom: 5px; color: #333; font-size: 14px;">Aclaraciones:</p>
+      <div style="border: 1px solid #ccc; padding: 10px; min-height: 50px; margin-bottom: 15px; background-color: #fafafa; white-space: pre-wrap; font-size: 13px;">
+        ${data.aclaraciones || "No se proporcionaron aclaraciones."}
+      </div>
+      <p style="font-weight: bold; margin-bottom: 5px; color: #333; font-size: 14px;">Justificación (Si Cumplimiento es 0):</p>
+      <div style="border: 1px solid #ccc; padding: 10px; min-height: 50px; margin-bottom: 30px; background-color: #fafafa; white-space: pre-wrap; font-size: 13px;">
+        ${data.justificacion || "No aplica."}
+      </div>
 
-        <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
-            APROBACIÓN Y VALIDACIÓN
-        </h2>
-        
-        <div style="display: flex; justify-content: space-around; width: 100%; margin-top: 50px; text-align: center;">
-            <div style="width: 45%; border-top: 1px solid #000; padding-top: 5px;">
-                <p style="font-size: 14px; margin: 0;">_________________________</p>
-                <p style="font-size: 14px; margin: 0; font-weight: bold;">FIRMA DEL RESPONSABLE</p>
-            </div>
-            <div style="width: 45%;">
-                <div style="border: 2px dashed #999; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; background-color: #fff;">
-                    <span style="color: #999; font-size: 12px;">ESPACIO PARA SELLO INSTITUCIONAL</span>
-                </div>
-                <p style="font-size: 14px; margin: 0; font-weight: bold;">SELLO</p>
-            </div>
+      <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
+        APROBACIÓN Y VALIDACIÓN
+      </h2>
+      
+      <div style="display: flex; justify-content: space-around; width: 100%; margin-top: 50px; text-align: center; flex-wrap: wrap;">
+        <div style="width: 45%; border-top: 1px solid #000; padding-top: 5px; margin-bottom: 20px;">
+          <p style="font-size: 14px; margin: 0;">_________________________</p>
+          <p style="font-size: 14px; margin: 0; font-weight: bold;">FIRMA DEL RESPONSABLE</p>
         </div>
+        <div style="width: 45%;">
+          <div style="border: 2px dashed #999; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; background-color: #fff;">
+            <span style="color: #999; font-size: 12px;">ESPACIO PARA SELLO INSTITUCIONAL</span>
+          </div>
+          <p style="font-size: 14px; margin: 0; font-weight: bold;">SELLO</p>
+        </div>
+      </div>
     </div>
   `;
 
-  // 1. Añadir el contenido al cuerpo del documento (invisible para el usuario)
   document.body.appendChild(content);
 
-  // 2. Usar html2canvas para capturar el HTML
   html2canvas(content, { scale: 2 }).then((canvas) => {
-    const ImageData = canvas.toDataURL("image/png");
+    const imageData = canvas.toDataURL("image/png");
     const doc = new jsPDF("p", "mm", "a4");
 
-    // Dimensiones A4 en mm
     const docHeight = doc.internal.pageSize.getHeight();
-    const ImageWidth = 210;
-    const ImageHeight = (canvas.height * ImageWidth) / canvas.width;
-    let heightLeft = ImageHeight;
+    const imageWidth = 210;
+    const imageHeight = (canvas.height * imageWidth) / canvas.width;
+    let heightLeft = imageHeight;
     let position = 0;
 
-    // Primer página
-    doc.addImage(ImageData, "PNG", 0, position, ImageWidth, ImageHeight);
+    doc.addImage(imageData, "PNG", 0, position, imageWidth, imageHeight);
     heightLeft -= docHeight;
 
-    // Si hay más contenido (manejo de multi-página)
     while (heightLeft > -5) {
-      // Usamos -5 como margen de error
-      position = heightLeft - ImageHeight;
+      position = heightLeft - imageHeight;
       doc.addPage();
-      doc.addImage(ImageData, "PNG", 0, position, ImageWidth, ImageHeight);
+      doc.addImage(imageData, "PNG", 0, position, imageWidth, imageHeight);
       heightLeft -= docHeight;
     }
 
-    // 3. Descargar el PDF
     doc.save(`Reporte_Cumplimiento_${data.cod}.pdf`);
-
-    // 4. Limpiar el DOM
     document.body.removeChild(content);
   });
 };
 
-// -------------------------------------------------------------
-// ## COMPONENTE PRINCIPAL: HOME
-// -------------------------------------------------------------
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 export default function Home() {
+  // State Management
   const [instituciones, setInstituciones] = useState<Institucion[]>([]);
   const [selectedInstitucion, setSelectedInstitucion] =
     useState<Institucion | null>(null);
@@ -243,13 +228,15 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<string>("");
   const [cumplimientoValue, setCumplimientoValue] = useState<number>(0);
-  const [view, setView] = useState<ViewState>("selection");
+  const [view, setView] = useState<ViewState>("institutions");
   const [registroAnios, setRegistroAnios] = useState<number[]>([]);
   const [introLoading, setIntroLoading] = useState(true);
 
-  // --- EFECTOS (useEffect) ---
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
 
-  // Efecto para cargar instituciones al montar
+  // Load institutions on mount
   useEffect(() => {
     const fetchInstituciones = async () => {
       try {
@@ -264,13 +251,56 @@ export default function Home() {
     fetchInstituciones();
   }, []);
 
-  // Efecto para la pantalla de carga inicial (introLoading)
+  // Intro loading screen
   useEffect(() => {
-    const timer = setTimeout(() => setIntroLoading(false), 3000); // 3 segundos
+    const timer = setTimeout(() => setIntroLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // --- FUNCIONES ASÍNCRONAS ---
+  // Load registered years when project is selected
+  useEffect(() => {
+    if (selectedProyecto) {
+      const fetchReporteAnios = async (proyectoId: number) => {
+        try {
+          const res = await fetch(`/api/reportes?proyectoId=${proyectoId}`);
+          if (!res.ok) throw new Error("Failed to fetch registered years");
+
+          const aniosRegistrados: number[] = await res.json();
+
+          console.log(
+            "[v0] Años registrados para proyecto",
+            proyectoId,
+            ":",
+            aniosRegistrados
+          );
+          setRegistroAnios(aniosRegistrados);
+
+          const aniosDisponibles = generateAniosOptions(aniosRegistrados);
+          const primerAnioDisponible =
+            aniosDisponibles.length > 0 ? aniosDisponibles[0].value : 0;
+
+          console.log(
+            "[v0] Años disponibles después de filtrar:",
+            aniosDisponibles.map((a) => a.value)
+          );
+
+          setFormData((prevData) => ({
+            ...prevData,
+            anio: primerAnioDisponible,
+          }));
+        } catch (error) {
+          console.error("Error fetching registered years:", error);
+          setRegistroAnios([]);
+        }
+      };
+
+      fetchReporteAnios(selectedProyecto.id);
+    }
+  }, [selectedProyecto]);
+
+  // ============================================================================
+  // HANDLERS
+  // ============================================================================
 
   const fetchProyectos = async (institucionId: number) => {
     try {
@@ -278,12 +308,12 @@ export default function Home() {
       if (!res.ok) throw new Error("Failed to fetch projects");
       const data = await res.json();
       setProyectos(data);
+      setView("projects");
     } catch (error) {
       console.error("Error fetching projects:", error);
+      setMessage("Error al cargar proyectos. Intenta de nuevo.");
     }
   };
-
-  // --- MANEJADORES DE ESTADO Y VISTA ---
 
   const handleInstitucionSelect = (institucion: Institucion) => {
     setSelectedInstitucion(institucion);
@@ -297,49 +327,75 @@ export default function Home() {
     setSelectedProyecto(proyecto);
     setMessage(
       proyecto.reporte_id
-        ? "⚠️ Este proyecto ya tiene un reporte registrado." // solo advertencia
+        ? "⚠️ Este proyecto ya tiene un reporte registrado."
         : ""
     );
-
-    // TODO: Traer todos los años ya registrados para este proyecto (Implementación pendiente en el código original)
 
     setFormData((prevData) => ({
       ...prevData,
       cumplimiento: 0,
       porcentaje_acciones_realizadas: 0,
-      anio: 0, // reset del año
+      anio: 0,
     }));
     setCumplimientoValue(0);
     setView("form");
   };
 
   const handleBack = () => {
-    setSelectedProyecto(null);
-    setFormData({
-      poa: false,
-      pei: false,
-      pom: false,
-      cumplimiento: 0,
-      aclaraciones: "",
-      justificacion: "",
-      poaLink: "",
-      peiLink: "",
-      pomLink: "",
-      finiquitoLink: "",
-      porcentaje_acciones_realizadas: 0,
-      anio: 0,
-    });
-    setCumplimientoValue(0);
-    setMessage("");
-    setView("selection");
+    if (view === "form") {
+      setView("projects");
+      setFormData({
+        poa: false,
+        pei: false,
+        pom: false,
+        cumplimiento: 0,
+        aclaraciones: "",
+        justificacion: "",
+        poaLink: "",
+        peiLink: "",
+        pomLink: "",
+        finiquitoLink: "",
+        porcentaje_acciones_realizadas: 0,
+        anio: 0,
+      });
+      setCumplimientoValue(0);
+      setMessage("");
+      setSelectedProyecto(null);
+      setRegistroAnios([]);
+    } else if (view === "projects") {
+      setView("institutions");
+      setSelectedInstitucion(null);
+      setProyectos([]);
+      setMessage("");
+    }
   };
 
-  // --- MANEJADOR DE CAMBIOS EN EL FORMULARIO ---
+  const generateAniosOptions = (registrados: number[]) => {
+    const startYear = 2015;
+    const endYear = 2025;
+    const anios: { value: number; label: string; registrado: boolean }[] = [];
+
+    for (let anio = endYear; anio >= startYear; anio--) {
+      const isRegistrado = registrados.includes(anio);
+      if (!isRegistrado) {
+        anios.push({
+          value: anio,
+          label: anio.toString(),
+          registrado: false,
+        });
+      }
+    }
+
+    return anios;
+  };
+
+  const aniosDisponibles = generateAniosOptions(registroAnios);
 
   const handleFormChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
 
     if (type === "checkbox") {
       setFormData((prevData) => ({
@@ -350,7 +406,7 @@ export default function Home() {
           : "",
       }));
     } else if (name === "cumplimiento" && selectedProyecto) {
-      const newCumplimiento = parseFloat(value || "0");
+      const newCumplimiento = Number.parseFloat(value || "0");
       let calculatedPorcentaje = 0;
       if (selectedProyecto.meta > 0) {
         calculatedPorcentaje = (newCumplimiento / selectedProyecto.meta) * 100;
@@ -359,17 +415,12 @@ export default function Home() {
       setFormData((prevData) => ({
         ...prevData,
         cumplimiento: newCumplimiento,
-        porcentaje_acciones_realizadas: parseFloat(
+        porcentaje_acciones_realizadas: Number.parseFloat(
           calculatedPorcentaje.toFixed(2)
         ),
       }));
     } else if (name === "anio") {
-      const anioValue = parseInt(value || "0");
-      if (registroAnios.includes(anioValue)) {
-        setMessage(`⚠️ Ya existe un reporte para el año ${anioValue}.`);
-      } else {
-        setMessage("");
-      }
+      const anioValue = Number.parseInt(value || "0");
       setFormData((prevData) => ({
         ...prevData,
         anio: anioValue,
@@ -382,8 +433,6 @@ export default function Home() {
     }
   };
 
-  // --- MANEJADOR DE ENVÍO (SUBMIT) ---
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -395,14 +444,21 @@ export default function Home() {
       return;
     }
 
-    // Validación: cumplimiento 0 requiere justificación
+    if (
+      formData.anio === 0 ||
+      !aniosDisponibles.some((a) => a.value === formData.anio)
+    ) {
+      setMessage("Por favor, selecciona un año válido y no registrado.");
+      setLoading(false);
+      return;
+    }
+
     if (cumplimientoValue === 0 && !formData.justificacion) {
       setMessage("La justificación es obligatoria si el cumplimiento es 0.");
       setLoading(false);
       return;
     }
 
-    // Validación: documentos seleccionados requieren link
     if (
       (formData.poa && !formData.poaLink) ||
       (formData.pei && !formData.peiLink) ||
@@ -415,34 +471,17 @@ export default function Home() {
       return;
     }
 
-    // Validación: año
-    if (formData.anio < 2015 || formData.anio > 2026) {
-      setMessage("Por favor, ingresa un año válido entre 2015 y 2026.");
-      setLoading(false);
-      return;
-    }
-
-    // Validación: año ya registrado (si la lista `registroAnios` ya se pobló)
-    if (registroAnios.includes(formData.anio)) {
-      setMessage(`Ya existe un reporte para el año ${formData.anio}.`);
-      setLoading(false);
-      return;
-    }
-
     try {
       const reportData = {
         proyectoId: selectedProyecto.id,
-        cumplimiento: parseFloat(String(formData.cumplimiento)),
+        cumplimiento: Number.parseFloat(String(formData.cumplimiento)),
         porcentaje_acciones_realizadas: formData.porcentaje_acciones_realizadas,
-
         poaLink: formData.poa ? formData.poaLink || null : null,
         peiLink: formData.pei ? formData.peiLink || null : null,
         pomLink: formData.pom ? formData.pomLink || null : null,
-
         aclaraciones: formData.aclaraciones,
         justificacion: formData.justificacion,
         finiquitoLink: formData.finiquitoLink || null,
-
         poa: formData.poa,
         pei: formData.pei,
         pom: formData.pom,
@@ -460,7 +499,6 @@ export default function Home() {
         throw new Error(errorData.message || "Failed to save report");
       }
 
-      // Actualizar lista de años registrados
       setRegistroAnios((prev) => [...prev, formData.anio]);
 
       const fullReportData = {
@@ -477,7 +515,6 @@ export default function Home() {
         anio: reportData.anio,
       };
 
-      // SweetAlert con recarga y descarga PDF
       MySwal.fire({
         title: "¡Reporte enviado!",
         html: `El reporte del proyecto **${selectedProyecto.nombre}** ha sido enviado con éxito.`,
@@ -502,120 +539,142 @@ export default function Home() {
     }
   };
 
-  // --- RENDERIZADO DE CARGA INICIAL ---
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   if (introLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#202b52]">
+      <div className="flex items-center justify-center h-screen bg-[#202b52] p-4">
         <div className="flex flex-col items-center">
           <Image
-            src="/logo-copadeh.png" // cambia esta ruta a tu imagen
+            src="/logo-copadeh.png"
             alt="Cargando..."
-            height={300}
-            width={600}
+            height={150}
+            width={300}
           />
-          <p className="mt-4 text-white font-semibold text-lg">Cargando...</p>
+          <p className="mt-4 text-white font-semibold text-base">Cargando...</p>
         </div>
       </div>
     );
   }
 
-  // --- RENDERIZADO PRINCIPAL ---
-
   return (
-    <div className="min-h-screen bg-[#202b52] p-8">
-      <main className="max-w-6xl mx-auto p-8 bg-[#202b52] h-[90vh] overflow-y-auto">
-        <h1 className="text-3xl font-bold mb-6 text-center text-white">
+    <div className="min-h-screen bg-[#202b52] p-4">
+      <main className="max-w-full mx-auto p-0 sm:p-4 bg-[#202b52]">
+        <h1 className="text-2xl font-bold mb-4 text-center text-white">
           Reporte de Cumplimiento
         </h1>
 
-        {view === "selection" && (
-          <div className="flex gap-6">
-            <div className="w-[30%] h-[70vh] p-8 bg-white shadow-md rounded-lg overflow-y-scroll">
-              <h2 className="text-xl font-semibold mb-4 text-gray-700">
-                Selecciona una Institución:
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nombre
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {instituciones.map((inst) => (
-                      <tr
-                        key={inst.id}
-                        onClick={() => handleInstitucionSelect(inst)}
-                        className={`cursor-pointer hover:bg-gray-100 ${
-                          selectedInstitucion?.id === inst.id
-                            ? "bg-blue-600 text-white"
-                            : ""
-                        }`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {inst.nombre}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="w-[70%] h-[70vh] p-8 bg-white shadow-md rounded-lg overflow-y-scroll">
-              {selectedInstitucion && (
-                <div className="mb-4">
-                  <h2 className="text-xl font-semibold mb-4 text-gray-700">
-                    Selecciona un Proyecto de {selectedInstitucion.nombre}:
-                  </h2>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[65%]">
-                            Nombre
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {proyectos.map((proy) => (
-                          <tr
-                            key={proy.id}
-                            onClick={() => handleProyectoSelect(proy)}
-                            className={`cursor-pointer hover:bg-gray-100 ${
-                              selectedProyecto?.id === proy.id
-                                ? "bg-blue-100"
-                                : ""
-                            }`}
-                          >
-                            <td className="px-6 py-4 text-sm font-medium text-gray-900 w-[65%] break-words">
-                              {proy.nombre}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+        {/* INSTITUTIONS VIEW */}
+        {view === "institutions" && (
+          <div className="p-4 bg-white shadow-md rounded-lg h-auto min-h-[80vh]">
+            <h2 className="text-lg font-semibold mb-3 text-gray-700">
+              Selecciona una Institución:
+            </h2>
+            <div className="overflow-y-auto max-h-[70vh]">
+              {instituciones.length === 0 ? (
+                <p className="text-gray-500 text-center py-5">
+                  Cargando instituciones...
+                </p>
+              ) : (
+                <ul className="divide-y divide-gray-200">
+                  {instituciones.map((inst) => (
+                    <li
+                      key={inst.id}
+                      onClick={() => handleInstitucionSelect(inst)}
+                      className={`cursor-pointer p-3 hover:bg-gray-100 transition duration-150 rounded-md ${
+                        selectedInstitucion?.id === inst.id
+                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          : "text-gray-900"
+                      }`}
+                    >
+                      <span className="font-medium">{inst.nombre}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>
         )}
 
-        {view === "form" && selectedProyecto && (
-          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        {/* PROJECTS VIEW */}
+        {view === "projects" && selectedInstitucion && (
+          <div className="p-4 bg-white shadow-md rounded-lg h-auto min-h-[80vh]">
             <div className="flex items-center mb-4">
               <button
                 type="button"
                 onClick={handleBack}
-                className="flex items-center text-gray-600 hover:text-gray-900"
+                className="flex items-center text-blue-600 hover:text-blue-800"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 mr-2"
+                  className="h-5 w-5 mr-1"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L9.414 11H14a1 1 0 100-2H9.414l1.293-1.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span className="font-medium text-sm">Instituciones</span>
+              </button>
+            </div>
+            <h2 className="text-lg font-semibold mb-3 text-gray-700">
+              Proyectos de: {selectedInstitucion.nombre}
+            </h2>
+            <div className="overflow-y-auto max-h-[70vh]">
+              {proyectos.length === 0 ? (
+                <p className="text-gray-500 text-center py-5">
+                  No hay proyectos disponibles.
+                </p>
+              ) : (
+                <ul className="divide-y divide-gray-200">
+                  {proyectos.map((proy) => (
+                    <li
+                      key={proy.id}
+                      onClick={() => handleProyectoSelect(proy)}
+                      className={`cursor-pointer p-3 hover:bg-gray-100 transition duration-150 rounded-md ${
+                        selectedProyecto?.id === proy.id
+                          ? "bg-blue-100"
+                          : "text-gray-900"
+                      }`}
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium text-sm">
+                          {proy.nombre}
+                        </span>
+                        <span className="text-xs text-gray-500 mt-1">
+                          Código: {proy.cod} | Meta: {proy.meta}
+                        </span>
+                        {proy.reporte_id && (
+                          <span className="text-xs text-orange-500 font-semibold mt-1">
+                            (⚠️ Reporte Existente)
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* FORM VIEW */}
+        {view === "form" && selectedProyecto && (
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+            <div className="flex items-center mb-4">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex items-center text-white hover:text-gray-300"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-1"
                   fill="white"
                   viewBox="0 0 24 24"
                   stroke="white"
@@ -627,240 +686,288 @@ export default function Home() {
                     d="M10 19l-7-7m0 0l7-7m-7 7h18"
                   />
                 </svg>
-                <span className="font-semibold text-white">Regresar</span>
+                <span className="font-medium">Proyectos</span>
               </button>
             </div>
 
-            <h2 className="text-2xl font-semibold mb-4 text-white">
-              Datos del Proyecto: {selectedProyecto.nombre}
+            <h2 className="text-xl font-semibold mb-3 text-white">
+              Reporte: {selectedProyecto.nombre}
             </h2>
-            <div className="p-6 border border-gray-200 rounded-lg bg-gray-50">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div>
+
+            <div className="p-4 border border-gray-200 rounded-lg bg-white space-y-4">
+              {/* Project Information */}
+              <div className="space-y-2 text-sm">
+                <div className="text-gray-600">
+                  <span className="font-semibold text-gray-600">
+                    Institución:
+                  </span>{" "}
+                  {selectedInstitucion?.nombre || "N/A"}
+                </div>
+                <div className="text-gray-600">
                   <span className="font-semibold text-gray-600">Código:</span>{" "}
                   {selectedProyecto.cod}
                 </div>
-                <div>
-                  <span className="font-semibold text-gray-600">Medida:</span>{" "}
-                  {selectedProyecto.medida}
-                </div>
-                <div>
-                  <span className="font-semibold text-gray-600">Eje:</span>{" "}
-                  {selectedProyecto.eje}
-                </div>
-                <div>
+                <div className="text-gray-600">
                   <span className="font-semibold text-gray-600">Meta:</span>{" "}
                   {selectedProyecto.meta}
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="poa"
-                      name="poa"
-                      checked={formData.poa}
-                      onChange={handleFormChange}
-                      className="form-checkbox h-5 w-5 text-blue-600"
-                    />
-                    <label htmlFor="poa" className="text-gray-700 ml-2">
-                      POA
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="pei"
-                      name="pei"
-                      checked={formData.pei}
-                      onChange={handleFormChange}
-                      className="form-checkbox h-5 w-5 text-blue-600"
-                    />
-                    <label htmlFor="pei" className="text-gray-700 ml-2">
-                      PEI
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="pom"
-                      name="pom"
-                      checked={formData.pom}
-                      onChange={handleFormChange}
-                      className="form-checkbox h-5 w-5 text-blue-600"
-                    />
-                    <label htmlFor="pom" className="text-gray-700 ml-2">
-                      POM
-                    </label>
-                  </div>
-                </div>
+              <hr />
 
-                {formData.poa && (
-                  <div>
-                    <label htmlFor="poaLink" className="block text-gray-700">
-                      Enlace a documento POA:
-                    </label>
-                    <input
-                      type="url"
-                      id="poaLink"
-                      name="poaLink"
-                      value={formData.poaLink}
-                      onChange={handleFormChange}
-                      className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-                      required
-                    />
-                  </div>
-                )}
-                {formData.pei && (
-                  <div>
-                    <label htmlFor="peiLink" className="block text-gray-700">
-                      Enlace a documento PEI:
-                    </label>
-                    <input
-                      type="url"
-                      id="peiLink"
-                      name="peiLink"
-                      value={formData.peiLink}
-                      onChange={handleFormChange}
-                      className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-                      required
-                    />
-                  </div>
-                )}
-                {formData.pom && (
-                  <div>
-                    <label htmlFor="pomLink" className="block text-gray-700">
-                      Enlace a documento POM:
-                    </label>
-                    <input
-                      type="url"
-                      id="pomLink"
-                      name="pomLink"
-                      value={formData.pomLink}
-                      onChange={handleFormChange}
-                      className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-                      required
-                    />
-                  </div>
-                )}
-                <div className="flex flex-row gap-5">
-                  <div className="w-[45%]">
-                    <label
-                      htmlFor="cumplimiento"
-                      className="block text-gray-700"
-                    >
-                      Cumplimiento de Acciones (X):
-                    </label>
-                    <input
-                      type="number"
-                      id="cumplimiento"
-                      name="cumplimiento"
-                      value={formData.cumplimiento}
-                      onChange={handleFormChange}
-                      className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-                      required
-                    />
-                  </div>
-                  <div className="w-[45%]">
-                    <label htmlFor="anio" className="block text-gray-700">
-                      Año:
-                    </label>
-                    <input
-                      type="number"
-                      id="anio"
-                      name="anio"
-                      value={formData.anio}
-                      onChange={handleFormChange}
-                      className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-                      required
-                    />
-                  </div>
-                </div>
-
+              {/* Cumplimiento */}
+              {selectedProyecto.meta > 0 && (
                 <div>
-                  <label htmlFor="porcentaje" className="block text-gray-700">
-                    Porcentaje de Acciones Realizadas:
+                  <label
+                    htmlFor="cumplimiento"
+                    className="block text-gray-700 text-sm font-medium"
+                  >
+                    Cumplimiento de Acciones (X):
                   </label>
                   <input
-                    type="text"
-                    id="porcentaje"
-                    value={
-                      formData.porcentaje_acciones_realizadas.toFixed(2) + "%"
-                    }
-                    readOnly
-                    className="mt-1 w-full p-2 border border-gray-300 rounded-md bg-gray-200"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="aclaraciones" className="block text-gray-700">
-                    Aclaraciones:
-                  </label>
-                  <textarea
-                    id="aclaraciones"
-                    name="aclaraciones"
-                    value={formData.aclaraciones}
+                    type="number"
+                    id="cumplimiento"
+                    name="cumplimiento"
+                    value={formData.cumplimiento}
                     onChange={handleFormChange}
-                    className="mt-1 w-full p-2 border border-gray-300 rounded-md"
+                    className="mt-1 w-full p-2 border border-gray-300 text-gray-600 placeholder:text-gray-300 rounded-md text-base"
                     required
                   />
                 </div>
-                {cumplimientoValue === 0 && (
-                  <div>
-                    <label
-                      htmlFor="justificacion"
-                      className="block text-gray-700"
+              )}
+
+              {/* Year Selection */}
+              <div>
+                <label
+                  htmlFor="anio"
+                  className="block text-gray-700 text-sm font-medium"
+                >
+                  Año:
+                </label>
+                <select
+                  id="anio"
+                  name="anio"
+                  value={formData.anio}
+                  onChange={handleFormChange}
+                  className="mt-1 w-full p-2 border border-gray-300 text-gray-600 rounded-md text-base"
+                  required
+                >
+                  {aniosDisponibles.length === 0 && (
+                    <option value={0}>
+                      Todos los años (2015-2025) ya están registrados
+                    </option>
+                  )}
+                  {aniosDisponibles.map((a) => (
+                    <option key={a.value} value={a.value}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Registered Years Info */}
+              {registroAnios.length > 0 && (
+                <div className="text-sm text-gray-700 mt-2 p-3 border-l-4 border-blue-500 bg-blue-50 rounded">
+                  <div className="flex items-start">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0 mt-0.5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
                     >
-                      Justificación (obligatorio si el cumplimiento es 0):
-                    </label>
-                    <textarea
-                      id="justificacion"
-                      name="justificacion"
-                      value={formData.justificacion}
-                      onChange={handleFormChange}
-                      className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-                      required
-                    />
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <div>
+                      <span className="font-semibold">
+                        Años ya registrados para este proyecto:
+                      </span>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {registroAnios
+                          .sort((a, b) => b - a)
+                          .map((anio) => (
+                            <span
+                              key={anio}
+                              className="inline-block px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded"
+                            >
+                              {anio}
+                            </span>
+                          ))}
+                      </div>
+                      <p className="mt-2 text-xs text-gray-600">
+                        Estos años no aparecen en el selector porque ya tienen
+                        reportes registrados.
+                      </p>
+                    </div>
                   </div>
-                )}
-                <div>
+                </div>
+              )}
+
+              <hr />
+
+              {/* Percentage */}
+              <div>
+                <label
+                  htmlFor="porcentaje"
+                  className="block text-gray-700 text-sm font-medium"
+                >
+                  Porcentaje de Acciones Realizadas:
+                </label>
+                <input
+                  type="text"
+                  id="porcentaje"
+                  value={
+                    formData.porcentaje_acciones_realizadas.toFixed(2) + "%"
+                  }
+                  readOnly
+                  className="mt-1 w-full p-2 border border-gray-300 text-gray-600 rounded-md bg-gray-200 font-bold text-lg text-center"
+                />
+              </div>
+
+              <hr />
+
+              {/* Documentation */}
+              <p className="text-gray-700 text-sm font-medium mb-2">
+                Documentación Adjunta (Marcar y agregar enlace):
+              </p>
+              <div className="space-y-3">
+                {[
+                  {
+                    id: "poa",
+                    label: "POA",
+                    linkName: "poaLink" as keyof FormData,
+                  },
+                  {
+                    id: "pei",
+                    label: "PEI",
+                    linkName: "peiLink" as keyof FormData,
+                  },
+                  {
+                    id: "pom",
+                    label: "POM",
+                    linkName: "pomLink" as keyof FormData,
+                  },
+                ].map(({ id, label, linkName }) => (
+                  <div key={id}>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={id}
+                        name={id}
+                        checked={formData[id as keyof FormData] as boolean}
+                        onChange={handleFormChange}
+                        className="form-checkbox h-5 w-5 text-blue-600 rounded"
+                      />
+                      <label
+                        htmlFor={id}
+                        className="text-gray-700 ml-2 font-medium"
+                      >
+                        {label}
+                      </label>
+                    </div>
+                    {(formData[id as keyof FormData] as boolean) && (
+                      <input
+                        type="url"
+                        name={linkName as string}
+                        value={formData[linkName] as string}
+                        onChange={handleFormChange}
+                        placeholder={`Enlace a documento ${label}`}
+                        className="mt-2 w-full p-2 border text-gray-600 border-gray-300 rounded-md text-sm"
+                        required
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <hr />
+
+              {/* Aclaraciones */}
+              <div>
+                <label
+                  htmlFor="aclaraciones"
+                  className="block text-gray-700 text-sm font-medium"
+                >
+                  Reporte:
+                </label>
+                <textarea
+                  id="aclaraciones"
+                  name="aclaraciones"
+                  value={formData.aclaraciones}
+                  onChange={handleFormChange}
+                  rows={3}
+                  className="mt-1 w-full p-2 border text-gray-600 border-gray-300 rounded-md text-base"
+                  required
+                />
+              </div>
+
+              {/* Justificación (conditional) */}
+              {cumplimientoValue === 0 && (
+                <div className="border border-red-300 p-3 rounded-md bg-red-50">
                   <label
-                    htmlFor="finiquitoLink"
-                    className="block text-gray-700"
+                    htmlFor="justificacion"
+                    className="block text-red-700 text-sm font-medium"
                   >
-                    Enlace a Finiquito:
+                    Justificación (obligatorio si el cumplimiento es 0):
                   </label>
-                  <input
-                    type="url"
-                    id="finiquitoLink"
-                    name="finiquitoLink"
-                    value={formData.finiquitoLink}
+                  <textarea
+                    id="justificacion"
+                    name="justificacion"
+                    value={formData.justificacion}
                     onChange={handleFormChange}
-                    className="mt-1 w-full p-2 border border-gray-300 rounded-md"
+                    rows={3}
+                    className="mt-1 w-full p-2 border text-gray-600 border-gray-300 rounded-md text-base"
+                    required
                   />
                 </div>
+              )}
+
+              {/* Finiquito Link */}
+              <div>
+                <label
+                  htmlFor="finiquitoLink"
+                  className="block text-gray-700 text-sm font-medium"
+                >
+                  Enlace a Finiquito:
+                </label>
+                <input
+                  type="url"
+                  id="finiquitoLink"
+                  name="finiquitoLink"
+                  required
+                  value={formData.finiquitoLink}
+                  onChange={handleFormChange}
+                  className="mt-1 w-full p-2 border border-gray-300 text-gray-600 rounded-md text-base"
+                />
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-sky-900 font-bold py-3 px-6 rounded-md hover:bg-blue-300 transition duration-300 disabled:opacity-50"
-            >
-              {loading ? "Generando..." : "Generar Reporte"}
-            </button>
+            {/* Error/Warning Message */}
             {message && (
               <p
-                className={`mt-4 text-center font-semibold ${
+                className={`mt-4 text-center font-semibold p-2 rounded ${
                   message.startsWith("⚠️")
-                    ? "text-orange-500"
-                    : "text-green-600"
+                    ? "text-orange-500 bg-orange-100"
+                    : "text-red-600 bg-red-100"
                 }`}
               >
                 {message}
               </p>
             )}
+
+            {/* Submit Button */}
+            <div className="text-center pb-8">
+              <button
+                type="submit"
+                disabled={loading || aniosDisponibles.length === 0}
+                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {loading ? "Enviando..." : "Enviar Reporte"}
+              </button>
+            </div>
           </form>
         )}
       </main>
