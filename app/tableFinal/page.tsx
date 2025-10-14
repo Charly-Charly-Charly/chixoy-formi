@@ -324,7 +324,7 @@ const DetailsModal = ({ record, onClose }: DetailsModalProps) => {
           </button>
         </div>
 
-        <div className="space-y-4 text-sm md:text-base">
+        <div className="space-y-4 text-sm text-gray-600 md:text-base">
           <p>
             <strong>Proyecto:</strong>{" "}
             <span className="font-medium">{record.proyecto}</span>

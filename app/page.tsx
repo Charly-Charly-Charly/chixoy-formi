@@ -211,6 +211,9 @@ export default function Home() {
   const [selectedProyecto, setSelectedProyecto] = useState<Proyecto | null>(
     null
   );
+  const [proyectosRegisteredYears, setProyectosRegisteredYears] = useState<
+    Map<number, number[]>
+  >(new Map());
   const [formData, setFormData] = useState<FormData>({
     poa: false,
     pei: false,
@@ -308,6 +311,28 @@ export default function Home() {
       if (!res.ok) throw new Error("Failed to fetch projects");
       const data = await res.json();
       setProyectos(data);
+
+      // Fetch registered years for all projects
+      const yearsMap = new Map<number, number[]>();
+      await Promise.all(
+        data.map(async (proyecto: Proyecto) => {
+          try {
+            const yearsRes = await fetch(
+              `/api/reportes?proyectoId=${proyecto.id}`
+            );
+            if (yearsRes.ok) {
+              const years: number[] = await yearsRes.json();
+              yearsMap.set(proyecto.id, years);
+            }
+          } catch (error) {
+            console.error(
+              `Error fetching years for project ${proyecto.id}:`,
+              error
+            );
+          }
+        })
+      );
+      setProyectosRegisteredYears(yearsMap);
       setView("projects");
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -453,7 +478,11 @@ export default function Home() {
       return;
     }
 
-    if (cumplimientoValue === 0 && !formData.justificacion) {
+    if (
+      selectedProyecto.meta > 0 &&
+      cumplimientoValue === 0 &&
+      !formData.justificacion
+    ) {
       setMessage("La justificación es obligatoria si el cumplimiento es 0.");
       setLoading(false);
       return;
@@ -632,31 +661,43 @@ export default function Home() {
                 </p>
               ) : (
                 <ul className="divide-y divide-gray-200">
-                  {proyectos.map((proy) => (
-                    <li
-                      key={proy.id}
-                      onClick={() => handleProyectoSelect(proy)}
-                      className={`cursor-pointer p-3 hover:bg-gray-100 transition duration-150 rounded-md ${
-                        selectedProyecto?.id === proy.id
-                          ? "bg-blue-100"
-                          : "text-gray-900"
-                      }`}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium text-sm">
-                          {proy.nombre}
-                        </span>
-                        <span className="text-xs text-gray-500 mt-1">
-                          Código: {proy.cod} | Meta: {proy.meta}
-                        </span>
-                        {proy.reporte_id && (
-                          <span className="text-xs text-orange-500 font-semibold mt-1">
-                            (⚠️ Reporte Existente)
+                  {proyectos.map((proy) => {
+                    const registeredYears =
+                      proyectosRegisteredYears.get(proy.id) || [];
+                    return (
+                      <li
+                        key={proy.id}
+                        onClick={() => handleProyectoSelect(proy)}
+                        className={`cursor-pointer p-3 hover:bg-gray-100 transition duration-150 rounded-md ${
+                          selectedProyecto?.id === proy.id
+                            ? "bg-blue-100"
+                            : "text-gray-900"
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">
+                            {proy.nombre}
                           </span>
-                        )}
-                      </div>
-                    </li>
-                  ))}
+                          <span className="text-xs text-gray-500 mt-1">
+                            Código: {proy.cod} | Meta: {proy.meta}
+                            {registeredYears.length > 0 && (
+                              <span className="ml-2">
+                                | Años registrados:{" "}
+                                {registeredYears
+                                  .sort((a, b) => b - a)
+                                  .join(", ")}
+                              </span>
+                            )}
+                          </span>
+                          {proy.reporte_id && (
+                            <span className="text-xs text-orange-500 font-semibold mt-1">
+                              (⚠️ Reporte Existente)
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -898,14 +939,16 @@ export default function Home() {
                   name="aclaraciones"
                   value={formData.aclaraciones}
                   onChange={handleFormChange}
-                  rows={3}
-                  className="mt-1 w-full p-2 border text-gray-600 border-gray-300 rounded-md text-base"
-                  required
+                  rows={4}
+                  placeholder="Ingrese su reporte sobre el proyecto..."
+                  className="mt-1 w-full p-2 border border-gray-300 text-gray-600 placeholder:text-gray-400 rounded-md text-base"
                 />
               </div>
 
+              <hr />
+
               {/* Justificación (conditional) */}
-              {cumplimientoValue === 0 && (
+              {cumplimientoValue === 0 && selectedProyecto.meta > 0 && (
                 <div className="border border-red-300 p-3 rounded-md bg-red-50">
                   <label
                     htmlFor="justificacion"
@@ -919,7 +962,7 @@ export default function Home() {
                     value={formData.justificacion}
                     onChange={handleFormChange}
                     rows={3}
-                    className="mt-1 w-full p-2 border text-gray-600 border-gray-300 rounded-md text-base"
+                    className="mt-1 w-full p-2 border border-gray-300 rounded-md text-base"
                     required
                   />
                 </div>
@@ -935,12 +978,12 @@ export default function Home() {
                 </label>
                 <input
                   type="url"
+                  required
                   id="finiquitoLink"
                   name="finiquitoLink"
-                  required
                   value={formData.finiquitoLink}
                   onChange={handleFormChange}
-                  className="mt-1 w-full p-2 border border-gray-300 text-gray-600 rounded-md text-base"
+                  className="mt-1 w-full p-2 border text-gray-600 border-gray-300 rounded-md text-base"
                 />
               </div>
             </div>
