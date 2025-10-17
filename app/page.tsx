@@ -480,6 +480,17 @@ export default function Home() {
 
     if (
       selectedProyecto.meta > 0 &&
+      cumplimientoValue > selectedProyecto.meta
+    ) {
+      setMessage(
+        `El cumplimiento no puede ser mayor a la meta (${selectedProyecto.meta}).`
+      );
+      setLoading(false);
+      return;
+    }
+
+    if (
+      selectedProyecto.meta > 0 &&
       cumplimientoValue === 0 &&
       !formData.justificacion
     ) {
@@ -771,9 +782,14 @@ export default function Home() {
                     name="cumplimiento"
                     value={formData.cumplimiento}
                     onChange={handleFormChange}
+                    min="0"
+                    max={selectedProyecto.meta}
                     className="mt-1 w-full p-2 border border-gray-300 text-gray-600 placeholder:text-gray-300 rounded-md text-base"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Máximo permitido: {selectedProyecto.meta}
+                  </p>
                 </div>
               )}
 
@@ -937,6 +953,7 @@ export default function Home() {
                 <textarea
                   id="aclaraciones"
                   name="aclaraciones"
+                  required
                   value={formData.aclaraciones}
                   onChange={handleFormChange}
                   rows={4}
