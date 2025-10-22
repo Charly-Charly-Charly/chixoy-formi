@@ -152,6 +152,42 @@ const generatePDF = (data: any) => {
         ${data.justificacion || "No aplica."}
       </div>
 
+      ${
+        data.ipAddress || data.userAgent
+          ? `
+      <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
+        INFORMACIÓN DE AUDITORÍA
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px;">
+        ${
+          data.ipAddress
+            ? `
+        <tr>
+          <td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Dirección IP:</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;">${data.ipAddress}</td>
+        </tr>
+        `
+            : ""
+        }
+        ${
+          data.userAgent
+            ? `
+        <tr>
+          <td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Navegador/Dispositivo:</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace; font-size: 10px;">${data.userAgent}</td>
+        </tr>
+        `
+            : ""
+        }
+        <tr>
+          <td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Fecha de Envío:</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${formatDate()}</td>
+        </tr>
+      </table>
+      `
+          : ""
+      }
+
       <h2 style="font-size: 18px; color: ${headerColor}; border-bottom: 2px solid ${accentColor}; padding-bottom: 5px; margin-top: 20px;">
         APROBACIÓN Y VALIDACIÓN
       </h2>
@@ -539,6 +575,8 @@ export default function Home() {
         throw new Error(errorData.message || "Failed to save report");
       }
 
+      const responseData = await reportRes.json();
+
       setRegistroAnios((prev) => [...prev, formData.anio]);
 
       const fullReportData = {
@@ -553,6 +591,8 @@ export default function Home() {
         aclaraciones: reportData.aclaraciones,
         justificacion: reportData.justificacion,
         anio: reportData.anio,
+        ipAddress: responseData.data?.ipAddress,
+        userAgent: responseData.data?.userAgent,
       };
 
       MySwal.fire({

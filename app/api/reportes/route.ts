@@ -77,6 +77,12 @@ export async function POST(req: Request) {
       anio,
     } = await req.json();
 
+    const forwarded = req.headers.get("x-forwarded-for");
+    const ip = forwarded
+      ? forwarded.split(",")[0]
+      : req.headers.get("x-real-ip") || "unknown";
+    const userAgent = req.headers.get("user-agent") || "unknown";
+
     // Crear los valores numéricos (0 o 1) para la BD
     const poaValue = poa ? 1 : 0;
     const peiValue = pei ? 1 : 0;
@@ -85,28 +91,28 @@ export async function POST(req: Request) {
     // Conectar a la base de datos
     const connection = await mysql.createConnection(dbConfig);
 
-    // Consulta INSERT
     const query = `
       INSERT INTO Reportes 
-      (proyectoId, cumplimiento, porcentaje_acciones_realizadas, aclaraciones, justificacion, poa, pei, pom, poaLink, peiLink, pomLink, finiquitoLink, anio)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (proyectoId, cumplimiento, porcentaje_acciones_realizadas, aclaraciones, justificacion, poa, pei, pom, poaLink, peiLink, pomLink, finiquitoLink, anio, ip_address, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    // Los valores deben COINCIDIR en número y orden con la consulta.
     const values = [
       proyectoId,
       cumplimiento,
       porcentaje_acciones_realizadas,
       aclaraciones,
       justificacion,
-      poaValue, 
-      peiValue, 
-      pomValue, 
+      poaValue,
+      peiValue,
+      pomValue,
       poaLink,
       peiLink,
       pomLink,
       finiquitoLink,
       anio,
+      ip,
+      userAgent,
     ];
 
     await connection.execute(query, values);
