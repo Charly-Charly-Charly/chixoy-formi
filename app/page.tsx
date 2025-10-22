@@ -6,6 +6,8 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { LogoutButton } from "@/components/logout-button";
+import { useRouter } from "next/navigation";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -239,7 +241,8 @@ const generatePDF = (data: any) => {
 // ============================================================================
 
 export default function Home() {
-  // State Management
+  const router = useRouter();
+
   const [instituciones, setInstituciones] = useState<Institucion[]>([]);
   const [selectedInstitucion, setSelectedInstitucion] =
     useState<Institucion | null>(null);
@@ -270,13 +273,28 @@ export default function Home() {
   const [view, setView] = useState<ViewState>("institutions");
   const [registroAnios, setRegistroAnios] = useState<number[]>([]);
   const [introLoading, setIntroLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
-
-  // Load institutions on mount
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch("/api/auth/verify");
+        if (!res.ok) {
+          router.push("/login");
+          return;
+        }
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error("Error verificando autenticación:", error);
+        router.push("/login");
+      }
+    };
+    checkAuth();
+  }, [router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
     const fetchInstituciones = async () => {
       try {
         const res = await fetch("/api/instituciones");
@@ -288,15 +306,13 @@ export default function Home() {
       }
     };
     fetchInstituciones();
-  }, []);
+  }, [isAuthenticated]);
 
-  // Intro loading screen
   useEffect(() => {
     const timer = setTimeout(() => setIntroLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Load registered years when project is selected
   useEffect(() => {
     if (selectedProyecto) {
       const fetchReporteAnios = async (proyectoId: number) => {
@@ -337,10 +353,6 @@ export default function Home() {
     }
   }, [selectedProyecto]);
 
-  // ============================================================================
-  // HANDLERS
-  // ============================================================================
-
   const fetchProyectos = async (institucionId: number) => {
     try {
       const res = await fetch(`/api/proyectos?institucionId=${institucionId}`);
@@ -348,7 +360,6 @@ export default function Home() {
       const data = await res.json();
       setProyectos(data);
 
-      // Fetch registered years for all projects
       const yearsMap = new Map<number, number[]>();
       await Promise.all(
         data.map(async (proyecto: Proyecto) => {
@@ -619,9 +630,23 @@ export default function Home() {
     }
   };
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#202b52] p-4">
+        <div className="flex flex-col items-center">
+          <Image
+            src="/logo-copadeh.png"
+            alt="Verificando..."
+            height={150}
+            width={300}
+          />
+          <p className="mt-4 text-white font-semibold text-base">
+            Verificando autenticación...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (introLoading) {
     return (
@@ -642,9 +667,14 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#202b52] p-4">
       <main className="max-w-full mx-auto p-0 sm:p-4 bg-[#202b52]">
-        <h1 className="text-2xl font-bold mb-4 text-center text-white">
-          Reporte de Cumplimiento
-        </h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold text-white">
+            Reporte de Cumplimiento
+          </h1>
+          <div className="flex gap-2">
+            <LogoutButton />
+          </div>
+        </div>
 
         {/* INSTITUTIONS VIEW */}
         {view === "institutions" && (

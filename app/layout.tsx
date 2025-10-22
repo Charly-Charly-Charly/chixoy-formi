@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "INFORME DE EJECUCIÓN CHIXOY",
   description: "INFORME DE EJECUCIÓN CHIXOY",
+    generator: 'v0.app'
 };
 
 export default function RootLayout({
