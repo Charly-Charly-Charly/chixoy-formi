@@ -1,61 +1,72 @@
-"use client"
+"use client";
 
-import { useState, type FormEvent } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-      })
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (res.ok) {
         // Redirigir a la página principal
-        router.push("/")
-        router.refresh()
+        router.push("/");
+        router.refresh();
       } else {
-        setError(data.message || "Error al iniciar sesión")
+        setError(data.message || "Error al iniciar sesión");
       }
     } catch (err) {
-      console.error("Error:", err)
-      setError("Error de conexión. Intenta de nuevo.")
+      console.error("Error:", err);
+      setError("Error de conexión. Intenta de nuevo.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-[#202b52] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <Image src="/logo-copadeh.png" alt="Logo COPADEH" width={250} height={125} priority />
+          <Image
+            src="/logo-copadeh.png"
+            alt="Logo COPADEH"
+            width={250}
+            height={125}
+            priority
+          />
         </div>
 
         {/* Login Card */}
         <div className="bg-white rounded-lg shadow-xl p-8">
-          <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h1>
+          <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
+            Iniciar Sesión
+          </h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Username Field */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Usuario
               </label>
               <input
@@ -72,7 +83,10 @@ export default function LoginPage() {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Contraseña
               </label>
               <input
@@ -89,7 +103,9 @@ export default function LoginPage() {
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
             )}
 
             {/* Submit Button */}
@@ -108,18 +124,7 @@ export default function LoginPage() {
             <p className="text-xs mt-1">COPADEH - Chixoy</p>
           </div>
         </div>
-
-        {/* Demo Credentials */}
-        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-          <p className="font-semibold mb-1">Credenciales de prueba:</p>
-          <p>
-            Usuario: <span className="font-mono">admin</span>
-          </p>
-          <p>
-            Contraseña: <span className="font-mono">admin123</span>
-          </p>
-        </div>
       </div>
     </div>
-  )
+  );
 }

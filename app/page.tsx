@@ -697,7 +697,7 @@ export default function Home() {
           <h1 className="text-2xl font-bold text-white">
             Reporte de Cumplimiento
           </h1>
-          <div className="flex gap-2">
+          {/* <div className="flex gap-2">
             <button
               onClick={() => (window.location.href = "/admin")}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
@@ -705,7 +705,7 @@ export default function Home() {
               Panel Admin
             </button>
             <LogoutButton />
-          </div>
+          </div> */}
         </div>
 
         {/* INSTITUTIONS VIEW */}
