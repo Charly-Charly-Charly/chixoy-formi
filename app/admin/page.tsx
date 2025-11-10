@@ -98,11 +98,11 @@ export default function AdminPanel() {
       await Swal.fire({
         title: "Usuario Creado",
         html: `
-          <div class='text-left'>
-            <p class='mb-2'><strong>Usuario:</strong> ${data.data.username}</p>
-            <p class='mb-2'><strong>Nombre:</strong> ${data.data.nombre}</p>
-            <p class='mb-4 text-sm text-gray-600'>Ejecuta el siguiente SQL en tu base de datos:</p>
-            <div class='bg-gray-100 p-3 rounded text-xs font-mono overflow-x-auto'>
+          <div class="text-left">
+            <p class="mb-2"><strong>Usuario:</strong> ${data.data.username}</p>
+            <p class="mb-2"><strong>Nombre:</strong> ${data.data.nombre}</p>
+            <p class="mb-4 text-sm text-gray-600">Ejecuta el siguiente SQL en tu base de datos:</p>
+            <div class="bg-gray-100 p-3 rounded text-xs font-mono overflow-x-auto">
               ${data.data.sqlQuery}
             </div>
           </div>
@@ -174,11 +174,11 @@ export default function AdminPanel() {
       await Swal.fire({
         title: "Contraseña Reiniciada",
         html: `
-          <div class='text-left'>
-            <p class='mb-2'><strong>Usuario:</strong> ${username}</p>
-            <p class='mb-2'><strong>Nueva contraseña:</strong> ${newPassword}</p>
-            <p class='mb-4 text-sm text-gray-600'>Ejecuta el siguiente SQL en tu base de datos:</p>
-            <div class='bg-gray-100 p-3 rounded text-xs font-mono overflow-x-auto'>
+          <div class="text-left">
+            <p class="mb-2"><strong>Usuario:</strong> ${username}</p>
+            <p class="mb-2"><strong>Nueva contraseña:</strong> ${newPassword}</p>
+            <p class="mb-4 text-sm text-gray-600">Ejecuta el siguiente SQL en tu base de datos:</p>
+            <div class="bg-gray-100 p-3 rounded text-xs font-mono overflow-x-auto">
               ${data.data.sqlQuery}
             </div>
           </div>
@@ -369,11 +369,14 @@ export default function AdminPanel() {
                 <li>Completa el formulario con los datos del nuevo usuario</li>
                 <li>Selecciona la institución a la que pertenece</li>
                 <li>
-                  Haz clic en 'Crear Usuario' para generar el hash de la
-                  contraseña
+                  {
+                    'Haz clic en "Crear Usuario" para generar el hash de la contraseña'
+                  }
                 </li>
                 <li>
-                  Copia el SQL generado y ejecútalo en tu base de datos MySQL
+                  {
+                    "Copia el SQL generado y ejecútalo en tu base de datos MySQL"
+                  }
                 </li>
                 <li>El nuevo usuario solo verá proyectos de su institución</li>
               </ol>
