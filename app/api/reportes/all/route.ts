@@ -28,10 +28,12 @@ export async function GET(request: Request) {
         r.porcentaje_acciones_realizadas,
         r.finiquitoLink,
         r.aclaraciones,
-        r.justificacion
+        r.justificacion,
+        u.nombre AS usuario
       FROM Reportes r
       JOIN Proyectos p ON r.proyectoId = p.id
       JOIN Instituciones i ON p.institucionId = i.id
+      LEFT JOIN usuarios u ON r.usuarioId = u.id
     `;
 
     const params: any[] = [];
@@ -48,7 +50,10 @@ export async function GET(request: Request) {
     return NextResponse.json(rows, { status: 200 });
   } catch (error) {
     console.error("Error fetching reports:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   } finally {
     if (connection) connection.end();
   }

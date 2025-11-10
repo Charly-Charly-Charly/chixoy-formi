@@ -9,11 +9,10 @@
     "start": "next start"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
     "bcryptjs": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "crypto": "latest",
+    "crypto": "^1.0.1",
     "formidable": "^3.5.4",
     "html2canvas": "latest",
     "jose": "latest",

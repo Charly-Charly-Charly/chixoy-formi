@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Conexión a MySQL
     const connection = await mysql.createConnection({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
@@ -25,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     // Buscar usuario por nombre
     const [rows]: any = await connection.execute(
-      "SELECT id, username, password FROM usuarios WHERE username = ? LIMIT 1",
+      "SELECT id, username, password, nombre, institucionId FROM usuarios WHERE username = ? LIMIT 1",
       [username]
     );
 
@@ -50,10 +49,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear token JWT
+    // Crear token JWT con datos del usuario
     const token = await createToken({
       username: user.username,
       userId: user.id,
+      institucionId: user.institucionId,
     });
 
     const cookieStore = await cookies();

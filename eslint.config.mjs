@@ -16,7 +16,6 @@ const eslintConfig = [
     rules: {
       // Desactiva la regla que prohíbe el uso explícito de 'any' en TypeScript.
       "@typescript-eslint/no-explicit-any": "off",
-      "react/no-unescaped-entities": "off",
     },
   },
   // 👇 Objeto con la configuración de 'ignores'

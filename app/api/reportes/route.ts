@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import mysql from "mysql2/promise";
+import { verifyToken } from "@/lib/jwt";
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -77,6 +79,19 @@ export async function POST(req: Request) {
       anio,
     } = await req.json();
 
+    const authHeader = req.headers.get("Authorization");
+    const token =
+      authHeader?.replace("Bearer ", "") ||
+      (await cookies()).get("auth_token")?.value;
+    let usuarioId = null;
+
+    if (token) {
+      const decoded = await verifyToken(token);
+      console.log("[v0] Token decoded:", decoded);
+      usuarioId = decoded?.userId || null;
+      console.log("[v0] usuarioId extracted:", usuarioId);
+    }
+
     const forwarded = req.headers.get("x-forwarded-for");
     const ip = forwarded
       ? forwarded.split(",")[0]
@@ -93,8 +108,8 @@ export async function POST(req: Request) {
 
     const query = `
       INSERT INTO Reportes 
-      (proyectoId, cumplimiento, porcentaje_acciones_realizadas, aclaraciones, justificacion, poa, pei, pom, poaLink, peiLink, pomLink, finiquitoLink, anio, ip_address, user_agent)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (proyectoId, cumplimiento, porcentaje_acciones_realizadas, aclaraciones, justificacion, poa, pei, pom, poaLink, peiLink, pomLink, finiquitoLink, anio, ip_address, user_agent, usuarioId)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
@@ -113,6 +128,7 @@ export async function POST(req: Request) {
       anio,
       ip,
       userAgent,
+      usuarioId,
     ];
 
     await connection.execute(query, values);

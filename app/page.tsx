@@ -1,5 +1,4 @@
 "use client";
- 
 
 import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
 import Image from "next/image";
@@ -275,6 +274,9 @@ export default function Home() {
   const [registroAnios, setRegistroAnios] = useState<number[]>([]);
   const [introLoading, setIntroLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userInstitucionId, setUserInstitucionId] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -284,7 +286,9 @@ export default function Home() {
           router.push("/login");
           return;
         }
+        const data = await res.json();
         setIsAuthenticated(true);
+        setUserInstitucionId(data.institucionId);
       } catch (error) {
         console.error("Error verificando autenticación:", error);
         router.push("/login");
@@ -301,13 +305,30 @@ export default function Home() {
         const res = await fetch("/api/instituciones");
         if (!res.ok) throw new Error("Failed to fetch institutions");
         const data = await res.json();
+
+        if (userInstitucionId) {
+          const userInst = data.find(
+            (inst: Institucion) => inst.id === userInstitucionId
+          );
+          if (userInst) {
+            setInstituciones([userInst]);
+            setSelectedInstitucion(userInst);
+            fetchProyectos(userInst.id);
+            setView("projects");
+            return;
+          }
+        }
+
         setInstituciones(data);
       } catch (error) {
         console.error("Error fetching institutions:", error);
       }
     };
-    fetchInstituciones();
-  }, [isAuthenticated]);
+
+    if (userInstitucionId !== null) {
+      fetchInstituciones();
+    }
+  }, [isAuthenticated, userInstitucionId]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIntroLoading(false), 1500);
@@ -381,7 +402,11 @@ export default function Home() {
         })
       );
       setProyectosRegisteredYears(yearsMap);
-      setView("projects");
+      if (userInstitucionId) {
+        setView("projects");
+      } else {
+        setView("projects");
+      }
     } catch (error) {
       console.error("Error fetching projects:", error);
       setMessage("Error al cargar proyectos. Intenta de nuevo.");
@@ -673,12 +698,18 @@ export default function Home() {
             Reporte de Cumplimiento
           </h1>
           <div className="flex gap-2">
+            <button
+              onClick={() => (window.location.href = "/admin")}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
+            >
+              Panel Admin
+            </button>
             <LogoutButton />
           </div>
         </div>
 
         {/* INSTITUTIONS VIEW */}
-        {view === "institutions" && (
+        {view === "institutions" && !userInstitucionId && (
           <div className="p-4 bg-white shadow-md rounded-lg h-auto min-h-[80vh]">
             <h2 className="text-lg font-semibold mb-3 text-gray-700">
               Selecciona una Institución:

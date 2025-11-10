@@ -17,7 +17,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ authenticated: false }, { status: 401 })
     }
 
-    return NextResponse.json({ authenticated: true, username: payload.username }, { status: 200 })
+    return NextResponse.json(
+      {
+        authenticated: true,
+        username: payload.username,
+        institucionId: payload.institucionId,
+      },
+      { status: 200 },
+    )
   } catch (error) {
     console.error("Error verificando sesión:", error)
     return NextResponse.json({ authenticated: false }, { status: 500 })

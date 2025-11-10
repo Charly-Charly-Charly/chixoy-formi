@@ -19,17 +19,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { username, password, nombre, institucionId } = await request.json();
+    const { userId, username, newPassword } = await request.json();
 
-    if (!username || !password || !institucionId) {
+    if (!username || !newPassword) {
       return NextResponse.json(
-        { message: "Usuario, contraseña e institución son requeridos" },
+        { message: "Usuario y contraseña son requeridos" },
         { status: 400 }
       );
     }
 
     // Generar hash seguro
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Conectar a la base de datos
     const connection = await mysql.createConnection({
@@ -39,42 +39,45 @@ export async function POST(request: NextRequest) {
       database: process.env.DB_DATABASE,
     });
 
-    // Insertar nuevo usuario en la base de datos
-    const query = `
-      INSERT INTO usuarios (username, password, nombre, institucionId)
-      VALUES (?, ?, ?, ?)
-    `;
-    const values = [
-      username,
-      hashedPassword,
-      nombre || username,
-      institucionId,
-    ];
+    // Buscar si el usuario existe
+    const [userRows]: any = await connection.execute(
+      "SELECT id FROM usuarios WHERE username = ?",
+      [username]
+    );
 
-    await connection.execute(query, values);
+    if (userRows.length === 0) {
+      await connection.end();
+      return NextResponse.json(
+        { message: "El usuario no existe" },
+        { status: 404 }
+      );
+    }
+
+    // Actualizar contraseña
+    await connection.execute(
+      "UPDATE usuarios SET password = ? WHERE username = ?",
+      [hashedPassword, username]
+    );
+
     await connection.end();
 
-    // Devolver también el SQL de ejemplo (como tu UI espera)
-    const sqlQuery = `INSERT INTO usuarios (username, password, nombre, institucionId) VALUES ('${username}', '${hashedPassword}', '${
-      nombre || username
-    }', ${institucionId});`;
+    const sqlQuery = `UPDATE usuarios SET password = '${hashedPassword}' WHERE username = '${username}';`;
 
     return NextResponse.json(
       {
-        message: "Usuario creado exitosamente",
+        message: "Contraseña reiniciada exitosamente",
         data: {
           username,
-          nombre: nombre || username,
-          hashedPassword,
           sqlQuery,
+          newPassword, // opcional, por si necesitas mostrar la nueva contraseña generada
         },
       },
-      { status: 201 }
+      { status: 200 }
     );
   } catch (error) {
-    console.error("Error creando usuario:", error);
+    console.error("Error reiniciando contraseña:", error);
     return NextResponse.json(
-      { message: "Error al crear usuario" },
+      { message: "Error al reiniciar contraseña" },
       { status: 500 }
     );
   }
