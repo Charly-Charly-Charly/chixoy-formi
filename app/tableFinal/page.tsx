@@ -151,19 +151,25 @@ const generatePDF = (data: ApiRecord) => {
                 INFORMACIÓN GENERAL
             </h2>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
-                <tr><td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Institución:</td><td style="padding: 8px; border: 1px solid #ddd;">${
+                <tr><td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd; color:black;
+">Institución:</td><td style="color:black;
+color:black; padding: 8px; border: 1px solid #ddd;">${
     data.institucion
   }</td></tr>
-                <tr><td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Proyecto:</td><td style="padding: 8px; border: 1px solid #ddd;">${
-    data.proyecto
-  } (${data.cod})</td></tr>
-                <tr><td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Eje y Medida:</td><td style="padding: 8px; border: 1px solid #ddd;">${
-    data.eje
-  } - ${data.medida}</td></tr>
-                <tr><td style="padding: 8px; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Año:</td><td style="padding: 8px; border: 1px solid #ddd;">${
-    data.anio
+                <tr><td style="padding: 8px; color:black; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Proyecto:</td><td style="color:black;
+color:black;
+color:black; padding: 8px; border: 1px solid #ddd;">${data.proyecto} (${
+    data.cod
+  })</td></tr>
+                <tr><td style="padding: 8px; color:black; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Eje y Medida:</td><td style="color:black;
+color:black;
+color:black; padding: 8px; border: 1px solid #ddd;">${data.eje} - ${
+    data.medida
   }</td></tr>
-                <tr><td style="padding: 8px; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Nombre del Usuario:</td><td style="padding: 8px; border: 1px solid #ddd;">${
+                <tr><td style="padding: 8px; color:black; width: 30%; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Año:</td><td style="color:black;
+color:black;
+color:black; padding: 8px; border: 1px solid #ddd;">${data.anio}</td></tr>
+                <tr><td style="padding: 8px; color:black; font-weight: bold; background-color: ${accentColor}; border: 1px solid #ddd;">Nombre del Usuario:</td><td style="padding: 8px; border: 1px solid #ddd;color:black ">${
     data.nombre || "No se proporcionó nombre."
   }</td></tr>
             </table>
@@ -181,13 +187,13 @@ const generatePDF = (data: ApiRecord) => {
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">${
+                        <td style="padding: 8px; text-align: center; color:black; border: 1px solid #ddd;">${
                           data.meta
                         }</td>
-                        <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">${
+                        <td style="padding: 8px; text-align: center; color:black; border: 1px solid #ddd;">${
                           data.cumplimiento
                         }</td>
-                        <td style="padding: 8px; text-align: center; font-weight: bold; color: ${
+                        <td style="padding: 8px; text-align: center;   font-weight: bold; color: ${
                           porcentaje < 100 ? "#cc0000" : "#008000"
                         }; border: 1px solid #ddd;">${porcentaje}%</td>
                     </tr>
@@ -198,11 +204,11 @@ const generatePDF = (data: ApiRecord) => {
                 DETALLES Y JUSTIFICACIÓN
             </h2>
             <p style="font-weight: bold; margin-bottom: 5px; color: #333; font-size: 14px;">Aclaraciones:</p>
-            <div style="border: 1px solid #ccc; padding: 10px; min-height: 50px; margin-bottom: 15px; background-color: #fafafa; white-space: pre-wrap; font-size: 13px;">
+            <div style="border: 1px solid #ccc; padding: 10px; min-height: 50px; margin-bottom: 15px; color:black; background-color: #fafafa; white-space: pre-wrap; font-size: 13px;">
                 ${data.aclaraciones || "No se proporcionaron aclaraciones."}
             </div>
             <p style="font-weight: bold; margin-bottom: 5px; color: #333; font-size: 14px;">Justificación:</p>
-            <div style="border: 1px solid #ccc; padding: 10px; min-height: 50px; margin-bottom: 30px; background-color: #fafafa; white-space: pre-wrap; font-size: 13px;">
+            <div style="border: 1px solid #ccc; padding: 10px; min-height: 50px; margin-bottom: 30px; background-color: #fafafa; color:black; white-space: pre-wrap; font-size: 13px;">
                 ${data.justificacion || "No aplica."}
             </div>
 
@@ -212,12 +218,12 @@ const generatePDF = (data: ApiRecord) => {
             
             <div style="display: flex; justify-content: space-around; width: 100%; margin-top: 50px; text-align: center;">
                 <div style="width: 45%; border-top: 1px solid #000; padding-top: 5px;">
-                    <p style="font-size: 14px; margin: 0;">_________________________</p>
-                    <p style="font-size: 14px; margin: 0; font-weight: bold;">FIRMA DEL RESPONSABLE</p>
+                    <p style="font-size: 14px;color:black; margin: 0;">_________________________</p>
+                    <p style="font-size: 14px;color:black; margin: 0; font-weight: bold;">FIRMA DEL RESPONSABLE</p>
                 </div>
                 <div style="width: 45%;">
                     <div style="border: 2px dashed #999; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; background-color: #fff;">
-                        <span style="color: #999; font-size: 12px;">ESPACIO PARA SELLO INSTITUCIONAL</span>
+                        <span style="color: #999; font-size: 12px;">ESPACIO PARA SELLO INSTITUCIONAL Y FIRMA DEL DIRECTOR</span>
                     </div>
                     <p style="font-size: 14px; margin: 0; font-weight: bold;">SELLO</p>
                 </div>

@@ -277,6 +277,7 @@ export default function Home() {
   const [userInstitucionId, setUserInstitucionId] = useState<number | null>(
     null
   );
+  const [userRole, setUserRole] = useState<"admin" | "usuario" | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -288,7 +289,13 @@ export default function Home() {
         }
         const data = await res.json();
         setIsAuthenticated(true);
-        setUserInstitucionId(data.institucionId);
+        setUserRole(data.rol || "usuario");
+        setUserInstitucionId(data.institucionId || null);
+        sessionStorage.setItem("userRole", data.rol || "usuario");
+        console.log("[v0] Auth data:", {
+          rol: data.rol,
+          institucionId: data.institucionId,
+        });
       } catch (error) {
         console.error("Error verificando autenticación:", error);
         router.push("/login");
@@ -298,7 +305,7 @@ export default function Home() {
   }, [router]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || userRole === null) return;
 
     const fetchInstituciones = async () => {
       try {
@@ -306,7 +313,11 @@ export default function Home() {
         if (!res.ok) throw new Error("Failed to fetch institutions");
         const data = await res.json();
 
-        if (userInstitucionId) {
+        if (userRole === "admin") {
+          // Admin - show all institutions
+          setInstituciones(data);
+        } else if (userInstitucionId) {
+          // Regular user - show only their institution
           const userInst = data.find(
             (inst: Institucion) => inst.id === userInstitucionId
           );
@@ -318,17 +329,13 @@ export default function Home() {
             return;
           }
         }
-
-        setInstituciones(data);
       } catch (error) {
         console.error("Error fetching institutions:", error);
       }
     };
 
-    if (userInstitucionId !== null) {
-      fetchInstituciones();
-    }
-  }, [isAuthenticated, userInstitucionId]);
+    fetchInstituciones();
+  }, [isAuthenticated, userRole, userInstitucionId]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIntroLoading(false), 1500);
@@ -601,9 +608,17 @@ export default function Home() {
         anio: formData.anio,
       };
 
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("auth-token="))
+        ?.split("=")[1];
+
       const reportRes = await fetch("/api/reportes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
         body: JSON.stringify(reportData),
       });
 
@@ -693,17 +708,27 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#202b52] p-4">
       <main className="max-w-full mx-auto p-0 sm:p-4 bg-[#202b52]">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
           <h1 className="text-2xl font-bold text-white">
             Reporte de Cumplimiento
           </h1>
-          <div className="flex gap-2">
-            {/* <button
-              onClick={() => (window.location.href = "/admin")}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
-            >
-              Panel Admin
-            </button> */}
+          <div className="flex gap-2 flex-wrap">
+            {userRole === "admin" && (
+              <>
+                <button
+                  onClick={() => router.push("/admin")}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
+                >
+                  Panel Admin
+                </button>
+                <button
+                  onClick={() => router.push("/tableFinal")}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium"
+                >
+                  Ver Reportes
+                </button>
+              </>
+            )}
             <LogoutButton />
           </div>
         </div>

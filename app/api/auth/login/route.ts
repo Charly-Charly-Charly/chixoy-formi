@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Conexión a la base de datos
     const connection = await mysql.createConnection({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
@@ -22,9 +23,9 @@ export async function POST(request: NextRequest) {
       database: process.env.DB_DATABASE,
     });
 
-    // Buscar usuario por nombre
+    // Buscar usuario
     const [rows]: any = await connection.execute(
-      "SELECT id, username, password, nombre, institucionId FROM usuarios WHERE username = ? LIMIT 1",
+      "SELECT id, username, password, nombre, institucionId, rol FROM usuarios WHERE username = ? LIMIT 1",
       [username]
     );
 
@@ -39,9 +40,8 @@ export async function POST(request: NextRequest) {
 
     const user = rows[0];
 
-    // Comparar contraseñas con bcrypt
+    // Comparar contraseñas
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
       return NextResponse.json(
         { message: "Contraseña incorrecta" },
@@ -49,13 +49,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear token JWT con datos del usuario
+    // Crear token JWT con información del usuario
     const token = await createToken({
       username: user.username,
       userId: user.id,
       institucionId: user.institucionId,
+      rol: user.rol || "usuario",
     });
 
+    // Guardar token en cookie
     const cookieStore = await cookies();
     cookieStore.set("auth_token", token, {
       httpOnly: true,
@@ -66,7 +68,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { message: "Login exitoso", username: user.username },
+      {
+        message: "Login exitoso",
+        username: user.username,
+        rol: user.rol || "usuario",
+        nombre: user.nombre,
+      },
       { status: 200 }
     );
   } catch (error) {

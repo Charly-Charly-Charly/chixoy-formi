@@ -10,6 +10,7 @@ interface Usuario {
   nombre: string;
   created_at: string;
   institucionId?: number;
+  rol: string;
 }
 
 interface Institucion {
@@ -24,6 +25,7 @@ export default function AdminPanel() {
     password: "",
     nombre: "",
     institucionId: "",
+    rol: "usuario",
   });
   const [loading, setLoading] = useState(false);
   const [generatedSQL, setGeneratedSQL] = useState("");
@@ -43,9 +45,7 @@ export default function AdminPanel() {
       const res = await fetch("/api/instituciones");
       const data = await res.json();
 
-      if (Array.isArray(data)) {
-        setInstituciones(data);
-      }
+      if (Array.isArray(data)) setInstituciones(data);
     } catch (error) {
       console.error("Error cargando instituciones:", error);
     } finally {
@@ -57,10 +57,7 @@ export default function AdminPanel() {
     try {
       const res = await fetch("/api/auth/get-users");
       const data = await res.json();
-
-      if (res.ok) {
-        setUsuarios(data.data);
-      }
+      if (res.ok) setUsuarios(data.data);
     } catch (error) {
       console.error("Error cargando usuarios:", error);
     } finally {
@@ -74,9 +71,8 @@ export default function AdminPanel() {
     setGeneratedSQL("");
 
     try {
-      if (!formData.institucionId) {
+      if (!formData.institucionId)
         throw new Error("Debe seleccionar una institución");
-      }
 
       const res = await fetch("/api/auth/create-user", {
         method: "POST",
@@ -88,27 +84,34 @@ export default function AdminPanel() {
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Error al crear usuario");
-      }
+      if (!res.ok) throw new Error(data.message || "Error al crear usuario");
 
       setGeneratedSQL(data.data.sqlQuery);
 
       await Swal.fire({
         title: "Usuario Creado",
         html: `
-          <div class="text-left">
-            <p class="mb-2"><strong>Usuario:</strong> ${data.data.username}</p>
-            <p class="mb-2"><strong>Nombre:</strong> ${data.data.nombre}</p>
-            <p class="mb-4 text-sm text-gray-600">Ejecuta el siguiente SQL en tu base de datos:</p>
-            <div class="bg-gray-100 p-3 rounded text-xs font-mono overflow-x-auto">
-              ${data.data.sqlQuery}
+          <div class="text-left space-y-4">
+            <div>
+              <p><strong>Usuario:</strong> ${data.data.username}</p>
+              <p><strong>Nombre:</strong> ${data.data.nombre}</p>
+              <p><strong>Rol:</strong> ${
+                formData.rol === "admin" ? "Administrador" : "Usuario"
+              }</p>
+            </div>
+           
+            <div>
+              <p class="text-sm font-semibold text-gray-700">Plantilla de Correo:</p>
+              <div class="bg-blue-50 p-3 rounded text-xs overflow-y-auto max-h-64 whitespace-pre-wrap border border-blue-200">
+                ${data.data.emailTemplate}
+              </div>
+              <p class="text-xs text-gray-600 mt-2">Copia esta plantilla y envíala por correo al usuario</p>
             </div>
           </div>
         `,
         icon: "success",
         confirmButtonText: "Entendido",
+        width: "800px",
       });
 
       setFormData({
@@ -116,6 +119,7 @@ export default function AdminPanel() {
         password: "",
         nombre: "",
         institucionId: "",
+        rol: "usuario",
       });
       cargarUsuarios();
     } catch (error: any) {
@@ -145,12 +149,8 @@ export default function AdminPanel() {
       confirmButtonText: "Reiniciar",
       cancelButtonText: "Cancelar",
       inputValidator: (value) => {
-        if (!value) {
-          return "La contraseña es requerida";
-        }
-        if (value.length < 6) {
-          return "La contraseña debe tener al menos 6 caracteres";
-        }
+        if (!value) return "La contraseña es requerida";
+        if (value.length < 6) return "Debe tener al menos 6 caracteres";
       },
     });
 
@@ -160,24 +160,20 @@ export default function AdminPanel() {
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          newPassword,
-        }),
+        body: JSON.stringify({ username, newPassword }),
       });
 
       const data = await res.json();
-      if (!res.ok) {
+      if (!res.ok)
         throw new Error(data.message || "Error al reiniciar contraseña");
-      }
 
       await Swal.fire({
         title: "Contraseña Reiniciada",
         html: `
           <div class="text-left">
-            <p class="mb-2"><strong>Usuario:</strong> ${username}</p>
-            <p class="mb-2"><strong>Nueva contraseña:</strong> ${newPassword}</p>
-            <p class="mb-4 text-sm text-gray-600">Ejecuta el siguiente SQL en tu base de datos:</p>
+            <p><strong>Usuario:</strong> ${username}</p>
+            <p><strong>Nueva contraseña:</strong> ${newPassword}</p>
+            <p class="text-sm text-gray-600 mt-2">Ejecuta este SQL en tu base de datos:</p>
             <div class="bg-gray-100 p-3 rounded text-xs font-mono overflow-x-auto">
               ${data.data.sqlQuery}
             </div>
@@ -196,9 +192,9 @@ export default function AdminPanel() {
     }
   };
 
-  const getNombreInstitucion = (institucionId?: number): string => {
-    if (!institucionId) return "N/A";
-    const inst = instituciones.find((i) => i.id === institucionId);
+  const getNombreInstitucion = (id?: number): string => {
+    if (!id) return "N/A";
+    const inst = instituciones.find((i) => i.id === id);
     return inst?.nombre || "N/A";
   };
 
@@ -218,26 +214,19 @@ export default function AdminPanel() {
         </div>
 
         <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setActiveTab("crear")}
-            className={`px-6 py-2 rounded-lg font-semibold transition ${
-              activeTab === "crear"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-800 hover:bg-gray-100"
-            }`}
-          >
-            Crear Usuario
-          </button>
-          <button
-            onClick={() => setActiveTab("usuarios")}
-            className={`px-6 py-2 rounded-lg font-semibold transition ${
-              activeTab === "usuarios"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-800 hover:bg-gray-100"
-            }`}
-          >
-            Gestionar Usuarios
-          </button>
+          {["crear", "usuarios"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as "crear" | "usuarios")}
+              className={`px-6 py-2 rounded-lg font-semibold transition ${
+                activeTab === tab
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-800 hover:bg-gray-100"
+              }`}
+            >
+              {tab === "crear" ? "Crear Usuario" : "Gestionar Usuarios"}
+            </button>
+          ))}
         </div>
 
         {activeTab === "crear" ? (
@@ -245,87 +234,62 @@ export default function AdminPanel() {
             <h2 className="text-xl font-semibold mb-4 text-gray-800">
               Crear Nuevo Usuario
             </h2>
-
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="username"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Usuario (requerido)
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                  required
-                />
-              </div>
+              {[
+                {
+                  id: "username",
+                  label: "Usuario (requerido)",
+                  type: "text",
+                  required: true,
+                },
+                {
+                  id: "password",
+                  label: "Contraseña (requerido)",
+                  type: "password",
+                  required: true,
+                },
+                {
+                  id: "nombre",
+                  label: "Nombre Completo (opcional)",
+                  type: "text",
+                  required: false,
+                },
+              ].map((f) => (
+                <div key={f.id}>
+                  <label
+                    htmlFor={f.id}
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    {f.label}
+                  </label>
+                  <input
+                    type={f.type}
+                    id={f.id}
+                    value={(formData as any)[f.id]}
+                    onChange={(e) =>
+                      setFormData({ ...formData, [f.id]: e.target.value })
+                    }
+                    required={f.required}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                  />
+                </div>
+              ))}
 
               <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Contraseña (requerido)
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                  required
-                  minLength={6}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Mínimo 6 caracteres
-                </p>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="nombre"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Nombre Completo (opcional)
-                </label>
-                <input
-                  type="text"
-                  id="nombre"
-                  value={formData.nombre}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nombre: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="institucionId"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Institución (requerido)
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Institución
                 </label>
                 <select
-                  id="institucionId"
                   value={formData.institucionId}
                   onChange={(e) =>
                     setFormData({ ...formData, institucionId: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-700"
                   required
                 >
                   <option value="">Selecciona una institución...</option>
                   {loadingInstituciones ? (
-                    <option disabled>Cargando instituciones...</option>
+                    <option disabled>Cargando...</option>
                   ) : (
                     instituciones.map((inst) => (
                       <option key={inst.id} value={inst.id}>
@@ -336,58 +300,36 @@ export default function AdminPanel() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Rol
+                </label>
+                <select
+                  value={formData.rol}
+                  onChange={(e) =>
+                    setFormData({ ...formData, rol: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-700"
+                >
+                  <option value="usuario">Usuario</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
               >
                 {loading ? "Generando..." : "Crear Usuario"}
               </button>
             </form>
-
-            {generatedSQL && (
-              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <h3 className="text-sm font-semibold text-green-800 mb-2">
-                  SQL Generado:
-                </h3>
-                <div className="bg-white p-3 rounded border border-green-300 overflow-x-auto">
-                  <code className="text-xs font-mono text-gray-800">
-                    {generatedSQL}
-                  </code>
-                </div>
-                <p className="text-xs text-green-700 mt-2">
-                  Copia y ejecuta este SQL en tu base de datos MySQL.
-                </p>
-              </div>
-            )}
-
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="text-sm font-semibold text-blue-800 mb-2">
-                Instrucciones:
-              </h3>
-              <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
-                <li>Completa el formulario con los datos del nuevo usuario</li>
-                <li>Selecciona la institución a la que pertenece</li>
-                <li>
-                  {
-                    'Haz clic en "Crear Usuario" para generar el hash de la contraseña'
-                  }
-                </li>
-                <li>
-                  {
-                    "Copia el SQL generado y ejecútalo en tu base de datos MySQL"
-                  }
-                </li>
-                <li>El nuevo usuario solo verá proyectos de su institución</li>
-              </ol>
-            </div>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-800">
               Gestionar Usuarios
             </h2>
-
             {loadingUsuarios ? (
               <p className="text-center text-gray-600">Cargando usuarios...</p>
             ) : usuarios.length === 0 ? (
@@ -399,55 +341,57 @@ export default function AdminPanel() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-gray-100">
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-800">
-                        ID
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-800">
-                        Usuario
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-800">
-                        Nombre
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-800">
-                        Institución
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-800">
-                        Fecha Creación
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-800">
-                        Acciones
-                      </th>
+                      {[
+                        "ID",
+                        "Usuario",
+                        "Nombre",
+                        "Institución",
+                        "Fecha Creación",
+                        "Rol",
+                        "Acciones",
+                      ].map((col) => (
+                        <th
+                          key={col}
+                          className="px-4 py-2 text-left text-sm font-semibold text-gray-800"
+                        >
+                          {col}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {usuarios.map((usuario) => (
-                      <tr
-                        key={usuario.id}
-                        className="border-b hover:bg-gray-50"
-                      >
+                    {usuarios.map((u) => (
+                      <tr key={u.id} className="border-b hover:bg-gray-50">
                         <td className="px-4 py-2 text-sm text-gray-700">
-                          {usuario.id}
+                          {u.id}
                         </td>
-                        <td className="px-4 py-2 text-sm text-gray-700 font-mono">
-                          {usuario.username}
+                        <td className="px-4 py-2 text-sm font-mono text-gray-700">
+                          {u.username}
                         </td>
                         <td className="px-4 py-2 text-sm text-gray-700">
-                          {usuario.nombre}
+                          {u.nombre}
                         </td>
                         <td className="px-4 py-2 text-sm text-gray-700">
-                          {getNombreInstitucion(usuario.institucionId)}
+                          {getNombreInstitucion(u.institucionId)}
                         </td>
                         <td className="px-4 py-2 text-sm text-gray-700">
-                          {new Date(usuario.created_at).toLocaleDateString(
-                            "es-ES"
-                          )}
+                          {new Date(u.created_at).toLocaleDateString("es-ES")}
+                        </td>
+                        <td className="px-4 py-2 text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-semibold ${
+                              u.rol === "admin"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            {u.rol === "admin" ? "Administrador" : "Usuario"}
+                          </span>
                         </td>
                         <td className="px-4 py-2 text-sm">
                           <button
-                            onClick={() =>
-                              handleResetPassword(usuario.username)
-                            }
-                            className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition text-xs font-semibold"
+                            onClick={() => handleResetPassword(u.username)}
+                            className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 text-xs font-semibold"
                           >
                             Reiniciar Contraseña
                           </button>
