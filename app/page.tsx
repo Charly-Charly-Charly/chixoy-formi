@@ -1122,7 +1122,6 @@ export default function Home() {
                 </label>
                 <input
                   type="url"
-                  required
                   id="finiquitoLink"
                   name="finiquitoLink"
                   value={formData.finiquitoLink}
